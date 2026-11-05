@@ -29,7 +29,7 @@
 <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Расчёт упаковки v5 — SYNTX</title>
+<title>Расчёт упаковки v9 — SYNTX</title>
 <style>
 :root {
   --bg: #f6f7f9;
@@ -409,7 +409,7 @@ input[type="number"]:disabled { background: var(--bg); color: var(--ink-3); }
   <div class="brand">
     <span class="logo" aria-hidden="true"></span>
     <div>
-      <h1>Расчёт упаковки <span style="font-size:12px;font-weight:400;color:#9ca3af;vertical-align:middle">v5</span></h1>
+      <h1>Расчёт упаковки <span style="font-size:12px;font-weight:400;color:#9ca3af;vertical-align:middle">v9</span></h1>
       <p class="sub">Параметрическая развёртка, биговка и вырубка</p>
     </div>
   </div>
@@ -551,26 +551,67 @@ input[type="number"]:disabled { background: var(--bg); color: var(--ink-3); }
 
     </div>
 
+
+    <!-- ================= КРЫШКА-ДНО ================= -->
+    <div id="kryshaFields" hidden>
+
+      <div class="field">
+        <label class="lbl">Режим</label>
+        <div class="segmented row" id="kbSwitch" role="radiogroup"></div>
+      </div>
+
+      <div class="grid2">
+        <div class="field">
+          <label class="lbl" for="kA">Длина <span class="unit">A, мм</span></label>
+          <input id="kA" type="number" inputmode="decimal" min="1" step="1" value="100">
+        </div>
+        <div class="field">
+          <label class="lbl" for="kB">Ширина <span class="unit">B, мм</span></label>
+          <input id="kB" type="number" inputmode="decimal" min="1" step="1" value="60">
+        </div>
+      </div>
+      <p class="hint" data-krysha>Автоматически добавлено +2мм с каждой стороны</p>
+      <p class="hint" data-dno>К стороне А автоматически добавлен 1мм</p>
+
+      <div class="grid2">
+        <div class="field" data-dno>
+          <label class="lbl" for="kHD">Высота дна <span class="unit">HD, мм</span></label>
+          <input id="kHD" type="number" inputmode="decimal" min="1" step="1" value="50">
+        </div>
+        <div class="field" data-krysha>
+          <label class="lbl" for="kHK">Высота крышки <span class="unit">HK, мм</span></label>
+          <input id="kHK" type="number" inputmode="decimal" min="1" step="1" value="30">
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="field" data-dno>
+          <label class="lbl" for="kED">Клапан дна <span class="unit">ED, мм</span></label>
+          <input id="kED" type="number" inputmode="decimal" min="11" step="1" value="20">
+        </div>
+        <div class="field" data-krysha>
+          <label class="lbl" for="kEK">Клапан крышки <span class="unit">EK, мм</span></label>
+          <input id="kEK" type="number" inputmode="decimal" min="11" step="1" value="20">
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="field" data-dno>
+          <label class="lbl" for="kRD">Радиус дна <span class="unit">RD, мм</span></label>
+          <input id="kRD" type="number" inputmode="decimal" min="1" step="1" value="10">
+        </div>
+        <div class="field" data-krysha>
+          <label class="lbl" for="kRK">Радиус крышки <span class="unit">RK, мм</span></label>
+          <input id="kRK" type="number" inputmode="decimal" min="1" step="1" value="10">
+        </div>
+      </div>
+
+    </div>
+
   </section>
 
   <!-- ============ правая колонка: результат ============ -->
   <section class="results">
-
-    <div class="card" id="previewCard">
-      <div class="card-head">
-        <h2>Развёртка</h2>
-      </div>
-      <div class="preview" id="preview">
-        <div class="empty" id="emptyState">
-          <p>Задай размеры — развёртка пересчитается сама</p>
-        </div>
-      </div>
-      <div class="legend">
-        <span><i class="sw crease"></i> биговка</span>
-        <span><i class="sw cut"></i> рез</span>
-        <span><i class="sw perf"></i> ёжик</span>
-      </div>
-    </div>
 
     <div class="card" id="metricsCard" hidden>
       <div class="card-head">
@@ -581,6 +622,17 @@ input[type="number"]:disabled { background: var(--bg); color: var(--ink-3); }
         </div>
       </div>
       <div class="metrics" id="metrics"></div>
+    </div>
+
+    <div class="card" id="previewCard">
+      <div class="card-head">
+        <h2>Развёртка</h2>
+      </div>
+      <div class="preview" id="preview">
+        <div class="empty" id="emptyState">
+          <p>Задай размеры — развёртка пересчитается сама</p>
+        </div>
+      </div>
     </div>
 
     <div class="card" id="warnCard" hidden>
@@ -618,7 +670,8 @@ const STEP_RE = /^([+\-])\(([^,()]+),([^()]*)\)/;
 const T_ALIAS = {
   cut:    new Set(["cut", "рез", "резать", "нож", "knife", "контур", "1"]),
   crease: new Set(["crease", "биговка", "биг", "биговать", "fold", "cr", "2"]),
-  perf:   new Set(["ёжик", "ежик", "perf", "перфорация", "перф", "perforation", "3"]),
+  perf:   new Set(["ёжик", "ежик", "perf", "перф", "perforation", "3"]),
+  perfo:  new Set(["перфорация", "перфо", "perfo", "осевая", "5"]),
   guide:  new Set(["направляющая", "направл", "guide", "4"]),
 };
 
@@ -627,11 +680,13 @@ const DEF_STYLE = {
   cut:    { color: "#007FFF", width: 0.6,  dash: null },
   crease: { color: "#000000", width: 0.18, dash: null },
   perf:   { color: "#009999", width: 1.0,  dash: null },
+  // перфорация: оранжевая, тонкая, прерывистая осевая (длинный штрих, пробел, точка, пробел)
+  perfo:  { color: "#FF7F00", width: 0.18, dash: "12,3,1,3" },
   guide:  { color: "#94a3b8", width: 0.25, dash: "1.5,1.5" },
 };
 
 // Ближайшие индексированные цвета AutoCAD для каждого слоя DXF.
-const DXF_COLOR = { cut: 5, crease: 7, perf: 4, guide: 8 };
+const DXF_COLOR = { cut: 5, crease: 7, perf: 4, guide: 8, perfo: 30 };  // 30 — оранжевый ACI
 
 const EXTERNAL_MARK = "?";
 
@@ -1268,6 +1323,7 @@ class Drawing {
       cut:    { name: "CUT",    color: DXF_COLOR.cut },
       crease: { name: "CREASE", color: DXF_COLOR.crease },
       perf:   { name: "PERF",   color: DXF_COLOR.perf },
+      perfo:  { name: "PERFO",  color: DXF_COLOR.perfo, lt: "CENTER" },
     };
     const out = [];
     const g = (code, val) => { out.push(String(code), String(val)); };
@@ -1293,10 +1349,16 @@ class Drawing {
       .filter((t) => LAYERS[t]);
 
     g(0, "SECTION"); g(2, "TABLES");
+    // тип линии CENTER — прерывистая осевая для перфорации (длины в мм)
+    g(0, "TABLE"); g(2, "LTYPE"); g(70, 1);
+    g(0, "LTYPE"); g(2, "CENTER"); g(70, 0); g(3, "Center dash-dot");
+    g(72, 65); g(73, 4); g(40, 18);
+    g(49, 12); g(49, -3); g(49, 0); g(49, -3);
+    g(0, "ENDTAB");
     g(0, "TABLE"); g(2, "LAYER"); g(70, used.length);
     for (const t of used) {
       const l = LAYERS[t];
-      g(0, "LAYER"); g(2, l.name); g(70, "0"); g(62, l.color); g(6, "CONTINUOUS");
+      g(0, "LAYER"); g(2, l.name); g(70, "0"); g(62, l.color); g(6, l.lt || "CONTINUOUS");
     }
     g(0, "ENDTAB");
     g(0, "ENDSEC");
@@ -1334,7 +1396,7 @@ class Drawing {
   }
 
   /* ------------------------------------------------------------ SVG */
-  svg({ margin = 10, markIds = false, grid = false, showGuides = false } = {}) {
+  svg({ margin = 10, markIds = false, grid = false, showGuides = false, layers: layerList = null } = {}) {
     const [x0, , x1, y1] = this.bbox;
     const W = this.w + margin * 2;
     const H = this.h + margin * 2;
@@ -1344,10 +1406,7 @@ class Drawing {
       `<svg xmlns="http://www.w3.org/2000/svg" width="${fmt(W)}mm" height="${fmt(H)}mm" viewBox="0 0 ${fmt(W)} ${fmt(H)}">`,
       `<title>Raschet upakovki - razvyortka</title>`,
       `<desc>Made by Yauheni Padloukin @evgenpdl &amp; Claude Haiku 5.5</desc>`,
-      `<metadata>Made by Yauheni Padloukin @evgenpdl &amp; Claude Haiku 5.5 | ` +
-        `Raschet upakovki: parametric unfold, crease and cut lines | ` +
-        `Author: Yauheni Padloukin @evgenpdl | Co-author: Claude Haiku 5.5 (Anthropic)</metadata>`,
-      `<rect width="${fmt(W)}" height="${fmt(H)}" fill="#fff"/>`,
+      `<metadata>Made by Yauheni Padloukin @evgenpdl &amp; Claude Haiku 5.5 | Raschet upakovki: parametric unfold, crease and cut lines | Author: Yauheni Padloukin @evgenpdl | Co-author: Claude Haiku 5.5 (Anthropic)</metadata>`,
     ];
     if (grid) {
       out.push('<g stroke="#e2e8f0" stroke-width="0.15" fill="none">');
@@ -1355,7 +1414,7 @@ class Drawing {
       for (let k = 0; k <= H; k += 50) out.push(`<line x1="0" y1="${k}" x2="${fmt(W)}" y2="${k}"/>`);
       out.push("</g>");
     }
-    const layers = showGuides ? ["guide", "perf", "crease", "cut"] : ["perf", "crease", "cut"];
+    const layers = layerList || (showGuides ? ["guide", "perf", "perfo", "crease", "cut"] : ["perf", "perfo", "crease", "cut"]);
     for (const typ of layers) {
       const st = this.style[typ];
       const ds = st.dash ? ` stroke-dasharray="${st.dash}"` : "";
@@ -1375,7 +1434,7 @@ class Drawing {
         }
       }
       if (parts.length)
-        out.push(`<g data-type="${typ}" stroke="${st.color}" stroke-width="${st.width}" fill="none" stroke-linecap="square"${ds}>${parts.join("")}</g>`);
+      out.push(`<g id="${typ}" data-type="${typ}" stroke="${st.color}" stroke-width="${st.width}" fill="none" stroke-linecap="square"${ds}>${parts.join("")}</g>`);
     }
     if (markIds) {
       const txt = [];
@@ -1677,7 +1736,6 @@ function lint(src, params = {}) {
 if (typeof module !== "undefined" && module.exports) {
   module.exports = { Drawing, GeomError, parseSrc, parseText, lint, FUNCS };
 }
-
 
 /* Модель пакета. Правится здесь — приложение пересобирать не нужно. */
 
@@ -2215,11 +2273,146 @@ R203 | рез | X3-1.5 | Y12 | 1.5 | 0 | TANANG(X3-1.5, Y12, 1.5, X28, Y16, -1) 
 Нижний клапан не выше крышки  | B+E-t-HD_NF | нижний пылевой клапан выше клапана крышки | 0
 `;
 
+const MODEL_KRYSHA = `# ============================================================
+#  КРЫШКА-ДНО — шаблон (пустой контур)
+#  Made by Yauheni Padloukin @evgenpdl & Claude Haiku 5.5
+# ============================================================
+#  Входы (панель справа):
+#    A    — длина
+#    B    — ширина
+#    HD   — высота дна
+#    HK   — высота крышки
+#    ED   — ширина клапана дна
+#    EK   — ширина клапана крышки
+#    TYPD / TYPK — переключатель «дно / крышка» (кнопка в шапке):
+#      дно:    TYPD = 1, TYPK = 0
+#      крышка: TYPD = 0, TYPK = 1
+#  Недопустимые значения страница сама ставит в ближайшее допустимое.
+#  Оси зеркала X=0 и Y=0: рисуется одна четверть, остальное размножается.
+#  Скругление R1 между L19 и L20: радиус RD (дно) или RK (крышка), целое;
+#  линии продлеваются до касания;
+#  L21 заканчивается на дуге.
+# ============================================================
+
+[СЕТКА]
+A    = ?       # =100 ; длина
+B    = ?       # =60  ; ширина
+HD   = ?       # =50  ; высота дна
+HK   = ?       # =30  ; высота крышки
+ED   = ?       # =20  ; ширина клапана дна
+EK   = ?       # =20  ; ширина клапана крышки
+TYPD = ?       # =1   ; 1 — дно, 0 — крышка
+TYPK = ?       # =0   ; 0 — дно, 1 — крышка
+
+MIRROR_X = 0
+MIRROR_Y = 0
+
+# --- скругление между L19 и L20 ---
+# RD — радиус для дна, RK — радиус для крышки (целые). Рабочий выбирается по TYPD/TYPK.
+RD   = ?       # =10 ; радиус скругления дна, целое
+RK   = ?       # =10 ; радиус скругления крышки, целое
+RFK  = ROUND(RD*TYPD+RK*TYPK)
+FR   = RFK
+FP2X = X12+1.5
+FP2Y = Y11+6
+FQ2X = X1-6
+FQ2Y = Y21-1.5
+FLP  = SQRT((FP2X-X12)*(FP2X-X12)+(FP2Y-Y11)*(FP2Y-Y11))
+FLQ  = SQRT((FQ2X-X1)*(FQ2X-X1)+(FQ2Y-Y21)*(FQ2Y-Y21))
+FT   = ((X1-X12)*(FQ2Y-Y21)-(Y21-Y11)*(FQ2X-X1))/((FP2X-X12)*(FQ2Y-Y21)-(FP2Y-Y11)*(FQ2X-X1))
+FVX  = X12+FT*(FP2X-X12)
+FVY  = Y11+FT*(FP2Y-Y11)
+FUX  = -(FP2X-X12)/FLP
+FUY  = -(FP2Y-Y11)/FLP
+FWX  = -(FQ2X-X1)/FLQ
+FWY  = -(FQ2Y-Y21)/FLQ
+FDOT = FUX*FWX+FUY*FWY
+FCRS = ABS(FUX*FWY-FUY*FWX)
+FD   = FR*(1+FDOT)/FCRS
+FSH  = SQRT((1-FDOT)/2)
+FBX  = FUX+FWX
+FBY  = FUY+FWY
+FBN  = SQRT(FBX*FBX+FBY*FBY)
+FCX  = FVX+FR/FSH*FBX/FBN
+FCY  = FVY+FR/FSH*FBY/FBN
+FT1X = FVX+FD*FUX
+FT1Y = FVY+FD*FUY
+FT2X = FVX+FD*FWX
+FT2Y = FVY+FD*FWY
+FA1  = ATAN2(FT1Y-FCY, FT1X-FCX)
+FA2  = ATAN2(FT2Y-FCY, FT2X-FCX)
+FSX  = X1-FCX
+FSY  = Y11-FCY
+FB2  = 2*(-20*FSX+20*FSY)
+FC2  = FSX*FSX+FSY*FSY-FR*FR
+FK   = (-FB2+SQRT(FB2*FB2-3200*FC2))/1600
+FKX  = X1-20*FK
+FKY  = Y11+20*FK
+HDK=(HD*TYPD+HK*TYPK)
+EDK=(ED*TYPD+EK*TYPK)
+
+# --- оси X: панели B-t | A | B | A | D ---
+X0 = 0
+X1 = X0-B/2-2*TYPK
+X2=X1-HDK-0.5
+X3= X2-HDK/2
+X4=X2-HDK
+X5=X4-EDK
+
+X11=X1+1.5
+X12=X2+0.5
+X13=X1+EDK
+# --- оси Y ---
+Y0 = 0                               
+Y1 = Y0+A/2+0.5+2*TYPK
+Y2=Y1+HDK+0.5
+Y3=Y2+HDK/2
+Y4=Y2+HDK 
+Y5=Y4+EDK   
+
+Y11 =   Y1-0.5
+Y12 =   Y1-2
+Y13 =   Y12-EDK
+Y21 =   Y2-1
+[ЛИНИИ]
+
+L1 | биговка | X1 | Y0 | X1 | Y21
+L2 | биговка | X0 | Y2 | X11 | Y2
+L3 | биговка | X0 | Y1 | X1 | Y1
+L4 | рез | X1 | Y21 | X11 | Y2
+L5 | рез | X11 | Y2 | X11 | Y3
+L6 | рез | X11 | Y3 | X11-3 | Y3
+L7 | рез | X1 | Y3 | X1 | Y4
+L8 | рез | X1 | Y4 | X13 | Y5
+L9 | рез | X13 | Y5 | X0 | Y5
+L10 | перфорация | X1 | Y4 | X0 | Y4
+L11 | биговка | X1 | Y11 | X12 | Y11
+L12 | рез | X12 | Y11 | X3 | Y11
+L13 | рез | X3 | Y12 | X3 | Y12+3
+L14 | рез | X3 | Y12 | X4 | Y12
+L15 | рез | X4 | Y12 | X5 | Y13
+L16 | рез | X5 | Y13 | X5 | Y0
+L17 | перфорация | X4 | Y0 | X4 | Y12
+L18 | биговка | X2 | Y0 | X2 | Y11
+L19 | рез | X12 | Y11 | FT1X | FT1Y
+L20 | рез | X1 | Y21 | FT2X | FT2Y
+L21 | перфорация | X1 | Y11 | FKX | FKY
+[ОКРУЖНОСТИ]
+R1 | рез | FCX | FCY | FR | FA2 | FA1
+
+[ПРОВЕРКИ]
+# имя | условие (больше нуля = истина) | сообщение | стоп
+Дно: HD меньше B | TYPD*(B-HD)+(1-TYPD) | при дне высота HD={HD} должна быть меньше ширины B={B} | стоп
+Крышка: HK меньше B+4 | TYPK*(B+4-HK)+(1-TYPK) | при крышке высота HK={HK} должна быть меньше B+4={B} | стоп
+Ширина меньше длины | A-B | ширина B={B} должна быть меньше длины A={A} | стоп
+`;
+
 /* Виды упаковки. Список выводится в выпадающий список — новые типы
    добавляются строкой сюда, интерфейс подстроится сам. */
 const PACKAGE_TYPES = [
   { id: "packet", name: "Пакет",            model: MODEL_PACKET, ready: true  },
   { id: "pachka", name: "Пачка-пачка",      model: MODEL_PACHKA, ready: true  },
+  { id: "krysha", name: "Крышка-дно",         model: MODEL_KRYSHA, ready: true  },
 ];
 
 /* Виды ручки внутри пакета */
@@ -2236,7 +2429,7 @@ const HANDLE_MODES = [
    Модель берётся из models.js, движок — из engine.js.
    ============================================================ */
 
-const BUILD = "v5 · 03112026";   // подставляется сборщиком
+const BUILD = "v9 · 03112026";   // подставляется сборщиком
 
 /* ---------- авторство ------------------------------------------------------
    Made by Yauheni Padloukin @evgenpdl & Claude Haiku 5.5
@@ -2253,6 +2446,7 @@ const $ = (id) => document.getElementById(id);
 
 const state = {
   typeId: PACKAGE_TYPES[0].id,
+  kMode: "dno",             // крышка-дно: dno / krysha
   parts: 1,
   frame: false,
   pachkaType: "A",        // A — как в модели, B — срез и отражение
@@ -2290,9 +2484,70 @@ function buildTypeSelect() {
 
 /* Показать поля выбранного типа, спрятать остальные. */
 function syncTypeFields() {
-  const isPacket = state.typeId === "packet";
-  $("packetFields").hidden = !isPacket;
-  $("pachkaFields").hidden = isPacket;
+  $("packetFields").hidden = state.typeId !== "packet";
+  $("pachkaFields").hidden = state.typeId !== "pachka";
+  $("kryshaFields").hidden = state.typeId !== "krysha";
+  syncKryshaFields();
+}
+
+/* ================= крышка-дно =================
+   Переключатель «Дно / Крышка» выставляет TYPD / TYPK.
+   Показываем только поля выбранного режима; остальные хранят значения. */
+function buildKbSwitch() {
+  const box = $("kbSwitch");
+  box.innerHTML = "";
+  for (const [v, label] of [["dno", "Дно"], ["krysha", "Крышка"]]) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.role = "radio";
+    b.textContent = label;
+    b.setAttribute("aria-checked", String(state.kMode === v));
+    b.addEventListener("click", () => {
+      state.kMode = v;
+      buildKbSwitch();
+      syncKryshaFields();
+      calc();
+    });
+    box.appendChild(b);
+  }
+}
+
+function syncKryshaFields() {
+  const dno = state.kMode === "dno";
+  document.querySelectorAll("#kryshaFields [data-dno]").forEach((el) => { el.hidden = !dno; });
+  document.querySelectorAll("#kryshaFields [data-krysha]").forEach((el) => { el.hidden = dno; });
+}
+
+/* Допустимые значения крышка-дно: недопустимое ставится в ближайшее допустимое,
+   построение не блокируется. Правила — те же, что в testmodel. */
+function applyKryshaLimits() {
+  const num = (id) => {
+    const raw = String($(id).value).replace(",", ".").trim();
+    const v = Number(raw);
+    return raw === "" || !Number.isFinite(v) ? null : v;
+  };
+  const put = (id, v) => { if (num(id) !== v) $(id).value = fmt2(v); };
+  const dno = state.kMode === "dno";
+
+  const A = num("kA");
+  let B = num("kB");
+  if (A !== null && B !== null && B >= A) { put("kB", A - 1); B = A - 1; }
+
+  const HD = num("kHD"), HK = num("kHK");
+  if (dno && HD !== null && B !== null && HD >= B) put("kHD", B - 1);
+  if (!dno && HK !== null && B !== null && HK >= B + 4) put("kHK", B + 3);
+
+  for (const id of ["kED", "kEK"]) {
+    const v = num(id);
+    if (v !== null && v <= 10) put(id, 11);
+  }
+  for (const id of ["kRD", "kRK"]) {
+    const v = num(id);
+    if (v !== null) {
+      const r = Math.max(1, Math.floor(v + 0.5));   // радиус целый
+      if (r !== v) put(id, r);
+    }
+  }
 }
 
 /* Тип А / Тип Б для пачки. */
@@ -2439,6 +2694,14 @@ function readParams() {
     const v = Number(String($(id).value).replace(",", "."));
     return Number.isFinite(v) ? v : NaN;
   };
+  if (state.typeId === "krysha") {
+    const dno = state.kMode === "dno";
+    return {
+      A: num("kA"), B: num("kB"), HD: num("kHD"), HK: num("kHK"),
+      ED: num("kED"), EK: num("kEK"), RD: num("kRD"), RK: num("kRK"),
+      TYPD: dno ? 1 : 0, TYPK: dno ? 0 : 1,
+    };
+  }
   if (state.typeId === "pachka") {
     return {
       A: num("pA"),
@@ -2517,7 +2780,8 @@ function modelVars(model, params, names) {
 }
 
 function calc() {
-  clampAll();                       // значения ниже минимума подтягиваем к минимуму
+  clampAll();
+  if (state.typeId === "krysha") applyKryshaLimits();                       // значения ниже минимума подтягиваем к минимуму
   const type = currentType();
   const params = readParams();
 
@@ -2527,7 +2791,7 @@ function calc() {
 
   // Ноль — законное значение для перечислений и для KL / Zp (отступ и усиление
   // замков бывают нулевыми). Остальные размеры должны быть больше нуля.
-  const ZERO_OK = new Set(["MODE", "PARTS", "FRAME", "MAT", "HD_V", "HD_N", "KL", "Zp"]);
+  const ZERO_OK = new Set(["MODE", "PARTS", "FRAME", "MAT", "HD_V", "HD_N", "KL", "Zp", "TYPD", "TYPK"]);
   const bad = Object.entries(params)
     .filter(([k, v]) => {
       if (!Number.isFinite(v)) return true;
@@ -2568,6 +2832,11 @@ function calc() {
 }
 
 function fileName(p) {
+  if (state.typeId === "krysha") {
+    return state.kMode === "dno"
+      ? `dno_${p.A}_${p.B}_${p.HD}.svg`
+      : `kryshka_${p.A}_${p.B}_${p.HK}.svg`;
+  }
   if (state.typeId === "pachka") {
     const mat = p.MAT ? "gofra" : "karton";
     const t = state.pachkaType === "B" ? "_B" : "_A";
@@ -2653,7 +2922,36 @@ function cutCell(bd, mode, luvers, apertureD) {
   return { v: fmt0(total), u: "мм", n: note };
 }
 
+/* Крышка-дно: показатели в фиксированном порядке.
+   Перфорация входит в общую длину ножей. */
+function renderMetricsKrysha(d) {
+  const creaseLen = d.total("crease");
+  const cutLen = d.total("cut");
+  const perfLen = d.total("perfo");
+  const knives = creaseLen + cutLen + perfLen;
+  const area = (d.w * d.h) / 1e6;
+
+  const cells = [
+    { k: "Размер в развороте", v: `${fmt1(d.w)} × ${fmt1(d.h)}`, u: "мм", hl: true, n: "ширина × высота листа" },
+    { k: "Длина биговок", v: fmt0(creaseLen), u: "мм", n: `${d.count("crease")} линий` },
+    { k: "Длина реза", v: fmt0(cutLen), u: "мм", n: `${d.count("cut")} линий` },
+    { k: "Длина перфорации", v: fmt0(perfLen), u: "мм", n: `${d.count("perfo")} линий` },
+    { k: "Общая длина ножей", v: fmt0(knives), u: "мм", hl: true, n: "биговка + рез + перфорация" },
+    { k: "Площадь заготовки", v: area.toFixed(3), u: "м²", n: "по габариту заготовки" },
+  ];
+
+  $("metrics").innerHTML = cells.map((c) => `
+    <div class="metric${c.hl ? " hl" : ""}">
+      <div class="k">${esc(c.k)}</div>
+      <div class="v"><span>${esc(c.v)}</span>${c.u ? `<small>${esc(c.u)}</small>` : ""}</div>
+      ${c.n ? `<div class="n">${esc(c.n)}</div>` : ""}
+    </div>`).join("");
+
+  show("metricsCard");
+}
+
 function renderMetrics(d, p) {
+  if (state.typeId === "krysha") return renderMetricsKrysha(d);
   const creaseLen = d.total("crease");
   const creaseCount = d.count("crease");
 
@@ -2685,7 +2983,7 @@ function renderMetrics(d, p) {
   ];
 
   // Шаг отверстий есть только у пакета — у пачки отверстий нет.
-  if (state.typeId !== "pachka") {
+  if (state.typeId === "packet") {
     cells.push({ k: "Шаг отверстий", v: fmt0(d.var("dh")), u: "мм", n: "между ручками" });
   }
 
@@ -2790,6 +3088,7 @@ $("buildBadge").textContent = BUILD;
 
 buildTypeSelect();
 buildPartsSwitch();
+buildKbSwitch();
 buildFrameSwitch();
 buildModeSelect();
 buildPachkaTypeSwitch();
@@ -2842,7 +3141,8 @@ function clampAll() {
   return changed;
 }
 
-const ALL_INPUTS = ["A", "B", "H", "U", "pA", "pB", "pH", "pE", "pD",
+const ALL_INPUTS = ["kA", "kB", "kHD", "kHK", "kED", "kEK", "kRD", "kRK",
+                    "A", "B", "H", "U", "pA", "pB", "pH", "pE", "pD",
                     "pZ", "pZp", "pKL", "pZF", "pHDV", "pHDN"];
 
 /* Пустое поле в видимом блоке — не считаем, оставляем прошлый чертёж. */
