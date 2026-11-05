@@ -606,6 +606,65 @@ input[type="number"]:disabled { background: var(--bg); color: var(--ink-3); }
         </div>
       </div>
 
+
+    </div>
+
+
+    <!-- ================= ПЕНАЛ / ОБЕЧАЙКА ================= -->
+    <div id="penalFields" hidden>
+
+      <div class="field">
+        <label class="lbl">Изделие</label>
+        <div class="segmented row" id="pnKindSwitch" role="radiogroup"></div>
+      </div>
+
+      <div class="field" data-pn-penal>
+        <label class="lbl">Тип</label>
+        <div class="segmented row" id="pnBP" role="radiogroup"></div>
+      </div>
+
+      <div class="grid2">
+        <div class="field">
+          <label class="lbl" for="pnA">Длина <span class="unit">A, мм</span></label>
+          <input id="pnA" type="number" inputmode="decimal" min="1" step="1" value="100">
+        </div>
+        <div class="field">
+          <label class="lbl" for="pnB">Ширина <span class="unit">B, мм</span></label>
+          <input id="pnB" type="number" inputmode="decimal" min="1" step="1" value="100">
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="field">
+          <label class="lbl" for="pnH">Высота дна <span class="unit">H, мм</span></label>
+          <input id="pnH" type="number" inputmode="decimal" min="1" step="1" value="50">
+        </div>
+        <div class="field">
+          <label class="lbl" for="pnE">Борт <span class="unit">E, мм</span></label>
+          <input id="pnE" type="number" inputmode="decimal" min="11" step="1" value="11">
+        </div>
+      </div>
+
+      <div data-pn-penal>
+        <div class="field">
+          <label class="lbl">Лента</label>
+          <div class="segmented row" id="pnLentaSwitch" role="radiogroup"></div>
+          <div class="segmented row" id="pnLentaPos" role="radiogroup" style="margin-top:6px"></div>
+        </div>
+
+        <div class="field" id="pnWLentaField">
+          <label class="lbl" for="pnWLenta">Ширина ленты <span class="unit">WLENTA, мм</span></label>
+          <input id="pnWLenta" type="number" inputmode="decimal" min="15" step="1" value="20">
+          <p class="hint">Не меньше 15 мм</p>
+        </div>
+      </div>
+
+      <div class="field" data-pn-obech>
+        <label class="lbl">Дно</label>
+        <div class="segmented row" id="pnShubSwitch" role="radiogroup"></div>
+        <p class="hint">С дном добавляет 2 мм по высоте</p>
+      </div>
+
     </div>
 
   </section>
@@ -1079,7 +1138,7 @@ class Drawing {
       if (row.length < 6) throw new GeomError("в строке линии меньше 6 полей");
       const pid = normId(row[0]);
       if (this._src.has(pid)) throw new GeomError("дубль номера: " + pid);
-      this._src.set(pid, ["line", normType(row[1]), row[2], row[3], row[4], row[5], row[6]]);
+      this._src.set(pid, ["line", normType(row[1]), row[2], row[3], row[4], row[5], row[6], row[7]]);
     }
     for (const row of this.circlesSrc) {
       if (row.length < 7) throw new GeomError("в строке окружности меньше 7 полей");
@@ -1087,7 +1146,7 @@ class Drawing {
       if (!pid.startsWith("R"))
         throw new GeomError(`окружность должна иметь номер вида R1, а не «${row[0]}»`);
       if (this._src.has(pid)) throw new GeomError("дубль номера: " + pid);
-      this._src.set(pid, ["arc", normType(row[1]), row[2], row[3], row[4], row[5], row[6], row[7]]);
+      this._src.set(pid, ["arc", normType(row[1]), row[2], row[3], row[4], row[5], row[6], row[7], row[8]]);
     }
 
     for (const key of this.gridSrc.keys()) this.var(key);
@@ -1102,7 +1161,7 @@ class Drawing {
     for (const pid of order) {
       const row = this._src.get(pid);
       if (row[0] === "line") {
-        const [, t, x1, y1, x2, y2, cond] = row;
+        const [, t, x1, y1, x2, y2, cond, nomir] = row;
         if (!this._cond(cond, pid)) { this.hidden.push(pid); continue; }
         const a = this.pair(x1, y1);
         const b = this.pair(x2, y2);
@@ -1111,9 +1170,9 @@ class Drawing {
           this.notes.push(`линия ${pid} вырождена (нулевая длина), пропущена`);
           continue;
         }
-        this.segments.push({ kind: "line", id: pid, type: t, a, b, len: L });
+        this.segments.push({ kind: "line", id: pid, type: t, a, b, len: L, noMirror: this._noMirror(nomir, pid) });
       } else {
-        const [, t, cx, cy, r, a1, a2, ccond] = row;
+        const [, t, cx, cy, r, a1, a2, ccond, cnomir] = row;
         if (!this._cond(ccond, pid)) { this.hidden.push(pid); continue; }
         const c = this.pair(cx, cy);
         const rad = this.scalar(r);
@@ -1127,7 +1186,7 @@ class Drawing {
         const full = Math.abs(span) < 1e-9;
         if (full) span = 360;
         this.segments.push({
-          kind: "arc", id: pid, type: t, c, r: rad,
+          kind: "arc", id: pid, type: t, c, r: rad, noMirror: this._noMirror(cnomir, pid),
           start: s, end: e, span, full,
           a: onArc(c, rad, s), b: onArc(c, rad, e),
           len: rad * (span * Math.PI / 180),
@@ -1230,6 +1289,15 @@ class Drawing {
     this.cuts.push(`обрезка по оси: ${before} -> ${this.segments.length}`);
   }
 
+  /* Восьмое поле строки линии (девятое у окружности): «не зеркалить».
+     Пусто или 0 — обычное поведение, иначе сегмент не получает зеркальных копий. */
+  _noMirror(src, pid) {
+    if (src === undefined || src === null) return false;
+    const t = String(src).trim();
+    if (t === "") return false;
+    try { return this._cond(t, pid); } catch (e) { return false; }
+  }
+
   _applyMirrors() {
     const mx = this._axisOrNull("MIRROR_X");
     const my = this._axisOrNull("MIRROR_Y");
@@ -1241,7 +1309,8 @@ class Drawing {
 
     if (cx !== null || cy !== null) this._trimToMirror(cx, cy);
 
-    let cur = this.segments.slice();
+    /* сегменты с пометкой «не зеркалить» остаются в единственном экземпляре */
+    let cur = this.segments.filter((s) => !s.noMirror);
     const added = [];
     if (mx !== null) {
       const copyX = cur.map((s) => this._reflect(s, "X", mx, "#X"));
@@ -1527,7 +1596,7 @@ function parseSrc(src) {
         fields = dropTailComment(fields);
         if (!keep) fields = fields.filter((f) => f !== "");
         const need = cur === "lines" ? 6 : 7;
-        const max = need + 1;               // последнее поле — условие, необязательно
+        const max = need + 2;               // 7-е поле — условие, 8-е — «не зеркалить»
         if (fields.length < need || fields.length > max)
           throw new GeomError(
             fields.length < need
@@ -2409,10 +2478,213 @@ R1 | рез | FCX | FCY | FR | FA2 | FA1
 
 /* Виды упаковки. Список выводится в выпадающий список — новые типы
    добавляются строкой сюда, интерфейс подстроится сам. */
+const MODEL_PENAL = `# ============================================================
+#  ПЕНАЛ / ОБЕЧАЙКА — тестовая модель
+#  Made by Yauheni Padloukin @evgenpdl & Claude Haiku 5.5
+# ============================================================
+#  Два блока в одной модели. Переключатель «Пенал / Обечайка» на странице
+#  оставляет только свой блок (строки #@ПЕНАЛ ... #@/ПЕНАЛ и #@ОБЕЧАЙКА ... #@/ОБЕЧАЙКА).
+#  Отзеркаливание (MIRROR_X, MIRROR_Y) есть только в блоке ПЕНАЛ.
+#  TYPBIGPERF: 1 — биговка, 0 — перфорация (кнопка на странице).
+#  Размеры A, B, H, E общие для обоих блоков.
+#  Контуры блоков сейчас тестовые — заменить на настоящие.
+# ============================================================
+
+[СЕТКА]
+A          = ?    # =100 ; длина
+B          = ?    # =100 ; ширина
+H          = ?    # =50  ; высота дна
+E          = ?    # =10  ; ширина борта
+TYPBIGPERF = ?    # =1   ; 1 — биговка, 0 — перфорация
+SHUB       = ?    # =0   ; флаг шуббер: 1 — вкл, 0 — выкл
+#@ПЕНАЛ
+MIRROR_X = 0
+MIRROR_Y = 0
+LENTA      = ?    # =0   ; лента: 1 — вкл, 0 — выкл
+LENTA_MID  = ?    # =1   ; 1 — лента по середине, 0 — по низу
+WLENTA     = ?    # =20  ; ширина ленты, не меньше 15
+#@/ПЕНАЛ
+
+#@ПЕНАЛ
+# --- оси X ---
+X0 = 0
+X1 = X0-B/2-E
+X2=X1-H+0.5
+X3=X2-E
+X4=X3-H
+X5=X4-E+1
+
+X11=X1+E
+X12=X11-2.5
+X13=X1-E
+X14=X11+0.5
+
+X21 = X2+1
+
+
+# --- оси Y ---
+Y0 = 0
+Y1 = A/2+E
+Y2 = Y1+H+1
+Y3 = Y2+E
+Y4=Y3+H+0.5
+Y5 = Y4+E-1
+
+Y11 = Y1-0.5
+Y12 = Y1+3
+Y13 = Y1-E+0.25
+Y31 = Y3+3
+Y41=Y4-2.5
+
+Y67=Y11+(B/2+E)-1
+
+# --- отверстие под ленту ---
+YLC = Y1+LENTA_MID*(H+1)/2
+XL1 = X0-(WLENTA-2)/2
+XL2 = X0+(WLENTA-2)/2
+
+ZK1 = MIN(1,MAX(0,CEIL((Y2-Y67-0.0005)*1000)))
+ZK2 = 1-MIN(1,ABS(Y67-Y2)*1000000)
+ZK3 = MIN(1,MAX(0,CEIL((Y67-Y2)*1000)))*MIN(1,MAX(0,CEIL((Y2+E-Y67+0.0005)*1000)))
+ZK4 = MIN(1,MAX(0,CEIL((Y67-Y2-E)*1000)))
+PX = X1-(Y67-Y2)
+ZKP = MIN(1,MAX(0,CEIL((PX-X21-10+0.0005)*1000)))
+ZK5 = ZK4*ZKP
+ZK7 = ZK4*(1-ZKP)
+RF = MAX(4,CEIL((Y2+X1-X21-Y67)*0.70710678))
+YT = Y2+X1-X21-2.41421356*RF
+XT2 = X21+RF+0.70710678*RF
+YT2 = YT+0.70710678*RF
+#@/ПЕНАЛ
+
+#@ОБЕЧАЙКА
+# --- оси X ---
+X0=0
+X1=X0+H+2
+X2=X1+B+2*E+1.5
+X3=X2+H+2
+X4=X3+B+2*E+1.5
+X5=X4+15
+X6=X4+6
+# --- оси Y ---
+Y0=0
+Y1=Y0+5
+Y2=Y0+A+2*E+2*SHUB
+Y3=Y2-5
+Y4 = Y2-6
+Y5 = Y0+6
+Y6 = Y0-H-2
+
+#@/ОБЕЧАЙКА
+
+
+[ЛИНИИ]
+#@ПЕНАЛ
+L8 | рез | X0 | Y5 | X14 | Y5
+L9 | рез | X14 | Y5 | X14 | Y4
+
+L11 | рез | X12 | Y41 | X12 | Y3+3.5
+L12 | рез | X11 | Y3 | X11 | Y3+1
+L13 | рез | X11 | Y3 | X1 | Y2
+L14 | рез | X1 | Y2 | X1 | Y11
+L15 | рез | X2 | Y11 | X21 | Y12
+L16 | рез | X2 | Y11 | X5 | Y11
+L17 | рез | X5 | Y11 | X5 | Y0
+L18 | рез | X21 | Y12 | X21 | Y67+ZK7*(YT-Y67)
+L190 | рез | X21 | Y67 | X13 | Y67 | ZK1
+L191 | рез | X13 | Y67 | X13+E | Y67-E | ZK1
+L192 | рез | X21 | Y67 | X1 | Y67 | ZK2
+L193 | рез | X21 | Y67 | X1 | Y2 | ZK3
+L196 | рез | X21 | Y67 | PX | Y67 | ZK5
+L195 | рез | X1 | Y2 | PX+ZK7*(XT2-PX) | Y67+ZK7*(YT2-Y67) | ZK4
+
+L21 | рез | X4 | Y11 | X4 | Y13
+L22 | рез | X4 | Y13 | X3 | Y13
+L23 | биговка | X4 | Y0 | X4 | Y13 | TYPBIGPERF
+L83 | перфорация| X4 | Y0 | X4 | Y13 | 1-TYPBIGPERF
+L24 | биговка | X3 | Y13 | X3 | Y0
+L25 | биговка | X2 | Y11 | X2 | Y0
+L26 | биговка | X2 | Y11 | X1 | Y11
+L27 | биговка | X1 | Y11 | X1 | Y0
+
+L28 | биговка | X1 | Y1 | X0 | Y1 |1-LENTA
+L726 | биговка | X1 | Y1 | X0 | Y1 |LENTA*LENTA_MID
+L728 | биговка | X1 | Y1 | X0-(WLENTA+1)/2 | Y1 |LENTA*(1-LENTA_MID)
+L729 | биговка | X0-(WLENTA+1)/2 | -Y1 | X0+(WLENTA+1)/2 | -Y1 | LENTA*(1-LENTA_MID) | 1
+
+L29 | биговка | X1 | Y2 | X0 | Y2
+L30 | биговка | X11 | Y3 | X0 | Y3
+L31 | биговка | X14 | Y4 | X0 | Y4 | TYPBIGPERF
+L84 | перфорация| X14 | Y4 | X0 | Y4 | 1-TYPBIGPERF
+L96 | рез | X11 | Y4 | X14 | Y4
+
+# --- отверстие под ленту: (WLENTA+1) x 3, концы скруглены R1.5 ---
+# --- последнее поле = 1: не зеркалить (отверстие в центре, копии не нужны) ---
+L210 | рез | XL1 | YLC+1.5 | XL2 | YLC+1.5 | LENTA | 1
+L211 | рез | XL1 | YLC-1.5 | XL2 | YLC-1.5 | LENTA | 1
+
+#@/ПЕНАЛ
+
+#@ОБЕЧАЙКА
+L85 | рез | X0 | Y0 | X4 | Y0 | 1-SHUB
+L86 | рез | X0 | Y0 | X0 | Y2
+L87 | рез | X0 | Y2 | X4 | Y2
+L88 | рез | X4 | Y2 | X5 | Y4
+L89 | рез | X5 | Y4 | X5 | Y5
+L90 | рез | X5 | Y5 | X4 | Y0| 1-SHUB
+L91 | биговка | X1 | Y2 | X1 | Y0+1*SHUB
+L92 | биговка | X2 | Y0+1*SHUB | X2 | Y2
+L93 | биговка | X3 | Y2 | X3 | Y0+1*SHUB
+L94 | биговка | X4 | Y0 | X4 | Y2 | 1-SHUB
+L95 | ёжик | X6 | Y4 | X6 | Y5
+L100 | рез | X5 | Y5 | X4-1 | Y0 | SHUB
+
+L102 | рез | X0 | Y6 | X0 | Y0 | SHUB
+L103 | рез | X0 | Y6 | X1-1.5 | Y6 | SHUB
+L104 | рез | X1-1.5 | Y6 | X1-1.5 | Y0-0.5 | SHUB
+L105 | рез | X1+1.5 | Y6 | X1+1.5 | Y0-0.5 | SHUB
+L106 | рез | X2-1.5 | Y6 | X2-1.5 | Y0-0.5 | SHUB
+L107 | рез | X2+1.5 | Y6 | X2+1.5 | Y0-0.5 | SHUB
+L108 | рез | X3-1.5 | Y6 | X3-1.5 | Y0-0.5 | SHUB
+L109 | рез | X3+1.5 | Y6 | X3+1.5 | Y0-0.5 | SHUB
+L110 | рез | X4-1 | Y6 | X4-1 | Y0 | SHUB
+L197 | рез | X1+1.5 | Y6 | X2-1.5 | Y6| SHUB
+L198 | рез | X2+1.5 | Y6 | X3-1.5 | Y6| SHUB
+L199 | рез | X3+1.5 | Y6 | X4-1 | Y6| SHUB
+L200 | биговка | X4 | Y0+(Y5-Y0)/16 | X4 | Y2 | SHUB
+L201 | биговка | X0 | Y0 | X1-1.41421356 | Y0 | SHUB
+L202 | биговка | X1+1.41421356 | Y0 | X2-1.41421356 | Y0 | SHUB
+L203 | биговка | X2+1.41421356 | Y0 | X3-1.41421356 | Y0 | SHUB
+L204 | биговка | X3+1.41421356 | Y0 | X4-1 | Y0 | SHUB
+
+#@/ОБЕЧАЙКА
+
+[ОКРУЖНОСТИ]
+#@ПЕНАЛ
+R1 | рез | X14-0.5 | Y41 | 2.5 | 90 | 180
+R2 | рез | X11 | Y3+1+2.5 | 2.5 | 180 | 270
+R3 | рез | X21+RF | YT | RF | 45 | 180 | ZK7
+R7 | рез | XL1 | YLC | 1.5 | 90 | 270 | LENTA | 1
+R8 | рез | XL2 | YLC | 1.5 | 270 | 90 | LENTA | 1
+
+#@/ПЕНАЛ
+#@ОБЕЧАЙКА
+R4 | рез | X1 | Y0-0.5 | 1.5 | 0| 180| SHUB
+R5 | рез | X2 | Y0-0.5 | 1.5 | 0| 180| SHUB
+R6 | рез | X3 | Y0-0.5 | 1.5 | 0| 180| SHUB
+
+#@/ОБЕЧАЙКА
+[ПРОВЕРКИ]
+# имя | условие (больше нуля = истина) | сообщение | стоп
+Высота меньше ширины | B-H | высота дна H={H} должна быть меньше ширины B={B} | стоп
+Борт больше 10 | E-10 | ширина борта E={E} должна быть больше 10 | стоп
+`;
+
 const PACKAGE_TYPES = [
   { id: "packet", name: "Пакет",            model: MODEL_PACKET, ready: true  },
   { id: "pachka", name: "Пачка-пачка",      model: MODEL_PACHKA, ready: true  },
   { id: "krysha", name: "Крышка-дно",         model: MODEL_KRYSHA, ready: true  },
+  { id: "penal",  name: "Пенал",                model: MODEL_PENAL,  ready: true  },
 ];
 
 /* Виды ручки внутри пакета */
@@ -2429,7 +2701,7 @@ const HANDLE_MODES = [
    Модель берётся из models.js, движок — из engine.js.
    ============================================================ */
 
-const BUILD = "v9 · 03112026";   // подставляется сборщиком
+const BUILD = "v12 · 05112026";   // подставляется сборщиком
 
 /* ---------- авторство ------------------------------------------------------
    Made by Yauheni Padloukin @evgenpdl & Claude Haiku 5.5
@@ -2447,6 +2719,11 @@ const $ = (id) => document.getElementById(id);
 const state = {
   typeId: PACKAGE_TYPES[0].id,
   kMode: "dno",             // крышка-дно: dno / krysha
+  pnKind: "penal",          // пенал / обечайка
+  pnBP: 1,                  // 1 — биговка, 0 — перфорация
+  pnLenta: 0,               // лента вкл/выкл
+  pnMid: 1,                 // 1 — лента по середине, 0 — по низу
+  pnShub: 0,                // шуббер для обечайки
   parts: 1,
   frame: false,
   pachkaType: "A",        // A — как в модели, B — срез и отражение
@@ -2487,7 +2764,9 @@ function syncTypeFields() {
   $("packetFields").hidden = state.typeId !== "packet";
   $("pachkaFields").hidden = state.typeId !== "pachka";
   $("kryshaFields").hidden = state.typeId !== "krysha";
+  $("penalFields").hidden = state.typeId !== "penal";
   syncKryshaFields();
+  syncPenalFields();
 }
 
 /* ================= крышка-дно =================
@@ -2510,6 +2789,90 @@ function buildKbSwitch() {
     });
     box.appendChild(b);
   }
+}
+
+
+/* ================= пенал / обечайка =================
+   «Изделие» переключает блок модели (ПЕНАЛ / ОБЕЧАЙКА), «Тип» — биговку и перфорацию,
+   «Лента» — флаги LENTA / LENTA_MID. В обечайке ленты нет, зато есть «Дно». */
+function buildPenalSwitches() {
+  const kind = $("pnKindSwitch");
+  kind.innerHTML = "";
+  for (const [v, label] of [["penal", "Пенал"], ["obech", "Обечайка"]]) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.role = "radio";
+    b.textContent = label;
+    b.setAttribute("aria-checked", String(state.pnKind === v));
+    b.addEventListener("click", () => { state.pnKind = v; buildPenalSwitches(); syncPenalFields(); calc(); });
+    kind.appendChild(b);
+  }
+
+  const bp = $("pnBP");
+  bp.innerHTML = "";
+  for (const [v, label] of [[1, "Биговка"], [0, "Перфорация"]]) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.role = "radio";
+    b.textContent = label;
+    b.setAttribute("aria-checked", String(state.pnBP === v));
+    b.addEventListener("click", () => { state.pnBP = v; buildPenalSwitches(); calc(); });
+    bp.appendChild(b);
+  }
+
+  const lent = $("pnLentaSwitch");
+  lent.innerHTML = "";
+  for (const [v, label] of [[0, "Без ленты"], [1, "Лента"]]) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.role = "radio";
+    b.textContent = label;
+    b.setAttribute("aria-checked", String(state.pnLenta === v));
+    b.addEventListener("click", () => { state.pnLenta = v; buildPenalSwitches(); syncPenalFields(); calc(); });
+    lent.appendChild(b);
+  }
+
+  /* Контейнер постоянный (pnLentaPos в разметке): раньше он создавался заново
+     на каждый клик и добавлялся рядом со старым — отсюда дубликаты кнопок. */
+  const pos = $("pnLentaPos");
+  if (pos) {
+    pos.innerHTML = "";
+    pos.hidden = state.pnLenta !== 1;
+    if (state.pnLenta === 1) {
+      for (const [v, label] of [[1, "Середина"], [0, "Низ"]]) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.role = "radio";
+        b.textContent = label;
+        b.setAttribute("aria-checked", String(state.pnMid === v));
+        b.addEventListener("click", () => { state.pnMid = v; buildPenalSwitches(); calc(); });
+        pos.appendChild(b);
+      }
+    }
+  }
+
+  const brd = $("pnShubSwitch");
+  if (brd) {
+    brd.innerHTML = "";
+    for (const [v, label] of [[0, "Без дна"], [1, "С дном"]]) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.role = "radio";
+      b.textContent = label;
+      b.setAttribute("aria-checked", String(state.pnShub === v));
+      b.addEventListener("click", () => { state.pnShub = v; buildPenalSwitches(); calc(); });
+      brd.appendChild(b);
+    }
+  }
+}
+
+function syncPenalFields() {
+  const penal = state.pnKind === "penal";
+  if (!penal) state.pnLenta = 0;   // в обечайке ленты нет
+  document.querySelectorAll("#penalFields [data-pn-penal]").forEach((el) => { el.hidden = !penal; });
+  document.querySelectorAll("#penalFields [data-pn-obech]").forEach((el) => { el.hidden = penal; });
+  const wl = $("pnWLentaField");
+  if (wl) wl.hidden = !(penal && state.pnLenta === 1);
 }
 
 function syncKryshaFields() {
@@ -2548,6 +2911,20 @@ function applyKryshaLimits() {
       if (r !== v) put(id, r);
     }
   }
+}
+
+/* Ограничения пенала: те же, что в [ПРОВЕРКИ] модели, но не блокируют построение,
+   а подтягивают значение к ближайшему допустимому. */
+function applyPenalLimits() {
+  const num = (id) => {
+    const raw = String($(id).value).replace(",", ".").trim();
+    const v = Number(raw);
+    return raw === "" || !Number.isFinite(v) ? null : v;
+  };
+  const put = (id, v) => { if (num(id) !== v) $(id).value = fmt2(v); };
+  const B = num("pnB"), H = num("pnH"), E = num("pnE");
+  if (B !== null && H !== null && H >= B) put("pnH", B - 1);
+  if (E !== null && E <= 10) put("pnE", 11);
 }
 
 /* Тип А / Тип Б для пачки. */
@@ -2694,6 +3071,17 @@ function readParams() {
     const v = Number(String($(id).value).replace(",", "."));
     return Number.isFinite(v) ? v : NaN;
   };
+  if (state.typeId === "penal") {
+    const penal = state.pnKind === "penal";
+    return {
+      A: num("pnA"), B: num("pnB"), H: num("pnH"), E: num("pnE"),
+      TYPBIGPERF: penal ? state.pnBP : 1,
+      SHUB: penal ? 0 : state.pnShub,
+      LENTA: penal ? state.pnLenta : 0,
+      LENTA_MID: penal ? state.pnMid : 1,
+      WLENTA: num("pnWLenta") || 20,
+    };
+  }
   if (state.typeId === "krysha") {
     const dno = state.kMode === "dno";
     return {
@@ -2733,6 +3121,26 @@ function readParams() {
 /* Тип Б: срезать всё ниже Y=0 и отзеркалить верхнюю часть.
    Правим текст модели на лету — сама модель остаётся нетронутой. */
 const MIRROR_LINE = /^\s*(MIRROR_(?:X|Y|CUT_X|CUT_Y))\s*=/i;
+
+/* Пенал / обечайка: модель содержит два блока (#@ПЕНАЛ ... #@/ПЕНАЛ и
+   #@ОБЕЧАЙКА ... #@/ОБЕЧАЙКА) и общую [СЕТКА]. Оставляем только нужный блок,
+   иначе обе части объявляют одни и те же оси. */
+function applyPenalBlock(src, kind) {
+  const want = kind === "obech" ? "ОБЕЧАЙКА" : "ПЕНАЛ";
+  const out = [];
+  let skip = false;
+  for (const row of String(src).split("\n")) {
+    const t = row.trim();
+    const m = t.match(/^#@(\/?)(.+)$/);
+    if (m) {
+      if (m[1]) skip = false;
+      else skip = m[2].trim() !== want;
+      continue;
+    }
+    if (!skip) out.push(row);
+  }
+  return out.join("\n");
+}
 
 function applyPachkaType(src, type) {
   const out = [];
@@ -2781,7 +3189,8 @@ function modelVars(model, params, names) {
 
 function calc() {
   clampAll();
-  if (state.typeId === "krysha") applyKryshaLimits();                       // значения ниже минимума подтягиваем к минимуму
+  if (state.typeId === "krysha") applyKryshaLimits();
+  if (state.typeId === "penal") applyPenalLimits();                       // значения ниже минимума подтягиваем к минимуму
   const type = currentType();
   const params = readParams();
 
@@ -2791,7 +3200,8 @@ function calc() {
 
   // Ноль — законное значение для перечислений и для KL / Zp (отступ и усиление
   // замков бывают нулевыми). Остальные размеры должны быть больше нуля.
-  const ZERO_OK = new Set(["MODE", "PARTS", "FRAME", "MAT", "HD_V", "HD_N", "KL", "Zp", "TYPD", "TYPK"]);
+  const ZERO_OK = new Set(["MODE", "PARTS", "FRAME", "MAT", "HD_V", "HD_N", "KL", "Zp", "TYPD", "TYPK",
+                         "SHUB", "LENTA", "LENTA_MID", "TYPBIGPERF"]);   // флаги пенала: ноль — законное значение
   const bad = Object.entries(params)
     .filter(([k, v]) => {
       if (!Number.isFinite(v)) return true;
@@ -2807,6 +3217,9 @@ function calc() {
   try {
     if (state.typeId === "pachka") {
       src = applyPachkaType(src, state.pachkaType);
+    }
+    if (state.typeId === "penal") {
+      src = applyPenalBlock(src, state.pnKind);
     }
     parsed = parseSrc(src);
     report = lint(src, useParams);
@@ -2836,6 +3249,11 @@ function fileName(p) {
     return state.kMode === "dno"
       ? `dno_${p.A}_${p.B}_${p.HD}.svg`
       : `kryshka_${p.A}_${p.B}_${p.HK}.svg`;
+  }
+  if (state.typeId === "penal") {
+    if (state.pnKind === "obech") return `obech_${p.A}x${p.B}x${p.H}${p.SHUB ? "_shub" : ""}.svg`;
+    const l = p.LENTA ? `_lenta${p.WLENTA}${p.LENTA_MID ? "_mid" : "_low"}` : "";
+    return `penal_${p.A}x${p.B}x${p.H}${l}.svg`;
   }
   if (state.typeId === "pachka") {
     const mat = p.MAT ? "gofra" : "karton";
@@ -2950,8 +3368,31 @@ function renderMetricsKrysha(d) {
   show("metricsCard");
 }
 
+function renderMetricsPenal(d) {
+  const creaseLen = d.total("crease"), cutLen = d.total("cut");
+  const perfLen = d.total("perfo") + d.total("perf");
+  const knives = creaseLen + cutLen + perfLen;
+  const area = (d.w * d.h) / 1e6;
+  const cells = [
+    { k: "Размер в развороте", v: `${fmt1(d.w)} × ${fmt1(d.h)}`, u: "мм", hl: true, n: "ширина × высота листа" },
+    { k: "Длина биговок", v: fmt0(creaseLen), u: "мм", n: `${d.count("crease")} линий` },
+    { k: "Длина реза", v: fmt0(cutLen), u: "мм", n: `${d.count("cut")} линий` },
+  ];
+  if (perfLen > 0) cells.push({ k: "Длина перфорации", v: fmt0(perfLen), u: "мм", n: `${d.count("perfo") + d.count("perf")} линий` });
+  cells.push({ k: "Общая длина ножей", v: fmt0(knives), u: "мм", hl: true, n: "биговка + рез" });
+  cells.push({ k: "Площадь заготовки", v: area.toFixed(3), u: "м²", n: "по габариту заготовки" });
+  $("metrics").innerHTML = cells.map((c) => `
+    <div class="metric${c.hl ? " hl" : ""}">
+      <div class="k">${esc(c.k)}</div>
+      <div class="v"><span>${esc(c.v)}</span>${c.u ? `<small>${esc(c.u)}</small>` : ""}</div>
+      ${c.n ? `<div class="n">${esc(c.n)}</div>` : ""}
+    </div>`).join("");
+  show("metricsCard");
+}
+
 function renderMetrics(d, p) {
   if (state.typeId === "krysha") return renderMetricsKrysha(d);
+  if (state.typeId === "penal") return renderMetricsPenal(d);
   const creaseLen = d.total("crease");
   const creaseCount = d.count("crease");
 
@@ -3089,6 +3530,7 @@ $("buildBadge").textContent = BUILD;
 buildTypeSelect();
 buildPartsSwitch();
 buildKbSwitch();
+buildPenalSwitches();
 buildFrameSwitch();
 buildModeSelect();
 buildPachkaTypeSwitch();
@@ -3101,7 +3543,7 @@ $("dlDxf").addEventListener("click", downloadDxf);
 
 /* Пересчёт сам, без кнопки. Небольшая задержка — чтобы не считать на каждый
    символ и не мигать ошибкой, пока поле недопечатано. */
-const AUTO_DELAY = 300;
+const AUTO_DELAY = 768;
 let autoTimer = null;
 
 /* Минимумы ввода для пачки. Значение ниже минимума подтягивается к нему —
@@ -3116,6 +3558,11 @@ const LIMITS = {
   pZ: 3,     // длина замка
   pZF: 3,    // глубина замка
   pKL: 0,    // отступ клапана — ноль допустим
+  pnA: 1,    // пенал: длина
+  pnB: 1,    // пенал: ширина
+  pnH: 1,    // пенал: высота дна
+  pnE: 11,   // пенал: борт
+  pnWLenta: 15, // пенал: ширина ленты
   pZp: 0,    // усиление замков — ноль допустим
   pHDV: 1,
   pHDN: 1,
@@ -3143,7 +3590,8 @@ function clampAll() {
 
 const ALL_INPUTS = ["kA", "kB", "kHD", "kHK", "kED", "kEK", "kRD", "kRK",
                     "A", "B", "H", "U", "pA", "pB", "pH", "pE", "pD",
-                    "pZ", "pZp", "pKL", "pZF", "pHDV", "pHDN"];
+                    "pZ", "pZp", "pKL", "pZF", "pHDV", "pHDN",
+                    "pnA", "pnB", "pnH", "pnE", "pnWLenta"];
 
 /* Пустое поле в видимом блоке — не считаем, оставляем прошлый чертёж. */
 function hasEmptyField() {
