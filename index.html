@@ -626,22 +626,22 @@ input[type="number"]:disabled { background: var(--bg); color: var(--ink-3); }
       <div class="grid2">
         <div class="field">
           <label class="lbl" for="pnA">Длина <span class="unit">A, мм</span></label>
-          <input id="pnA" type="number" inputmode="decimal" min="1" step="1" value="100">
+          <input id="pnA" type="number" inputmode="decimal" min="30" step="1" value="120">
         </div>
         <div class="field">
           <label class="lbl" for="pnB">Ширина <span class="unit">B, мм</span></label>
-          <input id="pnB" type="number" inputmode="decimal" min="1" step="1" value="100">
+          <input id="pnB" type="number" inputmode="decimal" min="20" step="1" value="60">
         </div>
       </div>
 
       <div class="grid2">
         <div class="field">
           <label class="lbl" for="pnH">Высота дна <span class="unit">H, мм</span></label>
-          <input id="pnH" type="number" inputmode="decimal" min="1" step="1" value="50">
+          <input id="pnH" type="number" inputmode="decimal" min="12" step="1" value="40">
         </div>
         <div class="field">
           <label class="lbl" for="pnE">Борт <span class="unit">E, мм</span></label>
-          <input id="pnE" type="number" inputmode="decimal" min="11" step="1" value="11">
+          <input id="pnE" type="number" inputmode="decimal" min="8" step="1" value="15">
         </div>
       </div>
 
@@ -663,6 +663,20 @@ input[type="number"]:disabled { background: var(--bg); color: var(--ink-3); }
         <label class="lbl">Дно</label>
         <div class="segmented row" id="pnShubSwitch" role="radiogroup"></div>
         <p class="hint">С дном добавляет 2 мм по высоте</p>
+      </div>
+
+      <div class="field" id="pnHolesField" hidden>
+        <label class="lbl">Отверстия</label>
+        <div class="segmented row" id="pnHolesSwitch" role="radiogroup"></div>
+        <div id="pnExtraField" hidden>
+        <label class="lbl" style="margin-top:6px">Доп. отверстие</label>
+        <div class="segmented row" id="pnExtraSwitch" role="radiogroup"></div>
+        </div>
+        <div class="field" id="pnRotField" hidden>
+          <label class="lbl" for="pnRot">Радиус отверстий <span class="unit">ROT, мм</span></label>
+          <input id="pnRot" type="number" inputmode="decimal" min="8" step="1" value="8">
+          <p class="hint">Не меньше 8 мм</p>
+        </div>
       </div>
 
     </div>
@@ -692,6 +706,17 @@ input[type="number"]:disabled { background: var(--bg); color: var(--ink-3); }
           <p>Задай размеры — развёртка пересчитается сама</p>
         </div>
       </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;padding:8px 12px">
+        <button class="btn ghost sm" id="dimToggle" disabled>Показать размеры</button>
+        <button class="btn ghost sm" id="idToggle" disabled>Номера линий (тест)</button>
+        <span style="margin-left:auto;display:flex;align-items:center;gap:4px">
+          <button class="btn ghost sm" id="zoomOut" title="Уменьшить">−</button>
+          <span id="zoomLabel" style="min-width:48px;text-align:center;font-size:12px">100%</span>
+          <button class="btn ghost sm" id="zoomReset" title="Сбросить масштаб">100%</button>
+          <button class="btn ghost sm" id="zoomIn" title="Увеличить">+</button>
+        </span>
+      </div>
+      <div id="dimNote" class="hint" style="padding:0 12px 8px" hidden></div>
     </div>
 
     <div class="card" id="warnCard" hidden>
@@ -2497,6 +2522,9 @@ H          = ?    # =50  ; высота дна
 E          = ?    # =10  ; ширина борта
 TYPBIGPERF = ?    # =1   ; 1 — биговка, 0 — перфорация
 SHUB       = ?    # =0   ; флаг шуббер: 1 — вкл, 0 — выкл
+HOLES      = ?    # =0   ; отверстия в дне: 1 — есть, 0 — нет (только при SHUB=1)
+ROT        = ?    # =8   ; радиус отверстий, не меньше 8
+EXTRA_HOLE = ?    # =0   ; доп. отверстие: 1 — есть, 0 — нет (только при SHUB=1)
 #@ПЕНАЛ
 MIRROR_X = 0
 MIRROR_Y = 0
@@ -2560,7 +2588,7 @@ YT2 = YT+0.70710678*RF
 #@ОБЕЧАЙКА
 # --- оси X ---
 X0=0
-X1=X0+H+2
+X1=X0+H+1.5
 X2=X1+B+2*E+1.5
 X3=X2+H+2
 X4=X3+B+2*E+1.5
@@ -2574,6 +2602,11 @@ Y3=Y2-5
 Y4 = Y2-6
 Y5 = Y0+6
 Y6 = Y0-H-2
+# центры отверстий задаёте сами
+HX1 = X0
+HY1 = Y0
+HX2 = X0
+HY2 = Y0
 
 #@/ОБЕЧАЙКА
 
@@ -2590,11 +2623,11 @@ L14 | рез | X1 | Y2 | X1 | Y11
 L15 | рез | X2 | Y11 | X21 | Y12
 L16 | рез | X2 | Y11 | X5 | Y11
 L17 | рез | X5 | Y11 | X5 | Y0
-L18 | рез | X21 | Y12 | X21 | Y67+ZK7*(YT-Y67)
+L18 | рез | X21 | Y12 | X21 | Y67+ZK7*(YT-Y67)-ZK3*(Y67-Y2)
 L190 | рез | X21 | Y67 | X13 | Y67 | ZK1
 L191 | рез | X13 | Y67 | X13+E | Y67-E | ZK1
 L192 | рез | X21 | Y67 | X1 | Y67 | ZK2
-L193 | рез | X21 | Y67 | X1 | Y2 | ZK3
+L193 | рез | X21 | Y67-ZK3*(Y67-Y2) | X1 | Y2 | ZK3
 L196 | рез | X21 | Y67 | PX | Y67 | ZK5
 L195 | рез | X1 | Y2 | PX+ZK7*(XT2-PX) | Y67+ZK7*(YT2-Y67) | ZK4
 
@@ -2672,12 +2705,14 @@ R8 | рез | XL2 | YLC | 1.5 | 270 | 90 | LENTA | 1
 R4 | рез | X1 | Y0-0.5 | 1.5 | 0| 180| SHUB
 R5 | рез | X2 | Y0-0.5 | 1.5 | 0| 180| SHUB
 R6 | рез | X3 | Y0-0.5 | 1.5 | 0| 180| SHUB
+R10 | рез | X2+(X3-x2)/2 | HY1+10+ROT/2 | ROT/2 | 0 | 360 | HOLES
+R11 | рез | X2+(X3-x2)/2 | HY1+20+1.25*ROT | ROT/2 | 0 | 360 | EXTRA_HOLE*HOLES
 
 #@/ОБЕЧАЙКА
 [ПРОВЕРКИ]
 # имя | условие (больше нуля = истина) | сообщение | стоп
 Высота меньше ширины | B-H | высота дна H={H} должна быть меньше ширины B={B} | стоп
-Борт больше 10 | E-10 | ширина борта E={E} должна быть больше 10 | стоп
+Борт не меньше 8 | E-7.9999 | ширина борта E={E} должна быть не меньше 8 | стоп
 `;
 
 const PACKAGE_TYPES = [
@@ -2701,7 +2736,7 @@ const HANDLE_MODES = [
    Модель берётся из models.js, движок — из engine.js.
    ============================================================ */
 
-const BUILD = "v12 · 05112026";   // подставляется сборщиком
+const BUILD = "v22 · 05112026";   // подставляется сборщиком
 
 /* ---------- авторство ------------------------------------------------------
    Made by Yauheni Padloukin @evgenpdl & Claude Haiku 5.5
@@ -2723,12 +2758,18 @@ const state = {
   pnBP: 1,                  // 1 — биговка, 0 — перфорация
   pnLenta: 0,               // лента вкл/выкл
   pnMid: 1,                 // 1 — лента по середине, 0 — по низу
-  pnShub: 0,                // шуббер для обечайки
+  pnShub: 0,                // дно у обечайки
+  pnHoles: 0,               // отверстия в дне (только при дне)
+  pnExtra: 0,               // доп. отверстие (только при дне)
+  pnRot: 8,                 // радиус отверстий, мм
   parts: 1,
   frame: false,
   pachkaType: "A",        // A — как в модели, B — срез и отражение
   mat: 0,                 // 0 картон / 1 гофра
   lastSvg: null,
+  showDims: false,
+  showIds: false,
+  zoom: 1,
   lastFileName: null,
   result: null,
 };
@@ -2796,6 +2837,7 @@ function buildKbSwitch() {
    «Изделие» переключает блок модели (ПЕНАЛ / ОБЕЧАЙКА), «Тип» — биговку и перфорацию,
    «Лента» — флаги LENTA / LENTA_MID. В обечайке ленты нет, зато есть «Дно». */
 function buildPenalSwitches() {
+  syncPenalFields();
   const kind = $("pnKindSwitch");
   kind.innerHTML = "";
   for (const [v, label] of [["penal", "Пенал"], ["obech", "Обечайка"]]) {
@@ -2851,6 +2893,34 @@ function buildPenalSwitches() {
     }
   }
 
+  const hol = $("pnHolesSwitch");
+  if (hol) {
+    hol.innerHTML = "";
+    for (const [v, label] of [[0, "Нет"], [1, "Есть"]]) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.role = "radio";
+      b.textContent = label;
+      b.setAttribute("aria-checked", String(state.pnHoles === v));
+      b.addEventListener("click", () => { state.pnHoles = v; buildPenalSwitches(); syncPenalFields(); calc(); });
+      hol.appendChild(b);
+    }
+  }
+
+  const ext = $("pnExtraSwitch");
+  if (ext) {
+    ext.innerHTML = "";
+    for (const [v, label] of [[0, "Нет"], [1, "Есть"]]) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.role = "radio";
+      b.textContent = label;
+      b.setAttribute("aria-checked", String(state.pnExtra === v));
+      b.addEventListener("click", () => { state.pnExtra = v; buildPenalSwitches(); calc(); });
+      ext.appendChild(b);
+    }
+  }
+
   const brd = $("pnShubSwitch");
   if (brd) {
     brd.innerHTML = "";
@@ -2860,7 +2930,7 @@ function buildPenalSwitches() {
       b.role = "radio";
       b.textContent = label;
       b.setAttribute("aria-checked", String(state.pnShub === v));
-      b.addEventListener("click", () => { state.pnShub = v; buildPenalSwitches(); calc(); });
+      b.addEventListener("click", () => { state.pnShub = v; syncPenalFields(); buildPenalSwitches(); calc(); });
       brd.appendChild(b);
     }
   }
@@ -2873,6 +2943,16 @@ function syncPenalFields() {
   document.querySelectorAll("#penalFields [data-pn-obech]").forEach((el) => { el.hidden = penal; });
   const wl = $("pnWLentaField");
   if (wl) wl.hidden = !(penal && state.pnLenta === 1);
+  const holesOn = !penal && state.pnShub === 1;
+  if (!holesOn) { state.pnHoles = 0; state.pnExtra = 0; }
+  const hf = $("pnHolesField");
+  if (hf) hf.hidden = !holesOn;
+  const rf = $("pnRotField");
+  if (rf) rf.hidden = !(holesOn && state.pnHoles === 1);
+  const extraOn = holesOn && state.pnHoles === 1;
+  if (!extraOn) state.pnExtra = 0;
+  const ef = $("pnExtraField");
+  if (ef) ef.hidden = !extraOn;
 }
 
 function syncKryshaFields() {
@@ -2922,9 +3002,13 @@ function applyPenalLimits() {
     return raw === "" || !Number.isFinite(v) ? null : v;
   };
   const put = (id, v) => { if (num(id) !== v) $(id).value = fmt2(v); };
-  const B = num("pnB"), H = num("pnH"), E = num("pnE");
+  const min = { pnA: 30, pnB: 20, pnH: 12, pnE: 8, pnRot: 8 };
+  for (const id of Object.keys(min)) {
+    const v = num(id);
+    if (v !== null && v < min[id]) put(id, min[id]);
+  }
+  const B = num("pnB"), H = num("pnH");
   if (B !== null && H !== null && H >= B) put("pnH", B - 1);
-  if (E !== null && E <= 10) put("pnE", 11);
 }
 
 /* Тип А / Тип Б для пачки. */
@@ -3077,6 +3161,9 @@ function readParams() {
       A: num("pnA"), B: num("pnB"), H: num("pnH"), E: num("pnE"),
       TYPBIGPERF: penal ? state.pnBP : 1,
       SHUB: penal ? 0 : state.pnShub,
+      HOLES: penal ? 0 : state.pnHoles,
+      EXTRA_HOLE: penal ? 0 : state.pnExtra,
+      ROT: num("pnRot"),
       LENTA: penal ? state.pnLenta : 0,
       LENTA_MID: penal ? state.pnMid : 1,
       WLENTA: num("pnWLenta") || 20,
@@ -3201,7 +3288,7 @@ function calc() {
   // Ноль — законное значение для перечислений и для KL / Zp (отступ и усиление
   // замков бывают нулевыми). Остальные размеры должны быть больше нуля.
   const ZERO_OK = new Set(["MODE", "PARTS", "FRAME", "MAT", "HD_V", "HD_N", "KL", "Zp", "TYPD", "TYPK",
-                         "SHUB", "LENTA", "LENTA_MID", "TYPBIGPERF"]);   // флаги пенала: ноль — законное значение
+                         "SHUB", "LENTA", "LENTA_MID", "TYPBIGPERF", "HOLES", "EXTRA_HOLE"]);   // флаги пенала: ноль — законное значение
   const bad = Object.entries(params)
     .filter(([k, v]) => {
       if (!Number.isFinite(v)) return true;
@@ -3251,7 +3338,7 @@ function fileName(p) {
       : `kryshka_${p.A}_${p.B}_${p.HK}.svg`;
   }
   if (state.typeId === "penal") {
-    if (state.pnKind === "obech") return `obech_${p.A}x${p.B}x${p.H}${p.SHUB ? "_shub" : ""}.svg`;
+    if (state.pnKind === "obech") return `obech_${p.A}x${p.B}x${p.H}${p.SHUB ? "_shub" : ""}${p.HOLES ? `_rot${p.ROT}` : ""}${p.EXTRA_HOLE ? "_extra" : ""}.svg`;
     const l = p.LENTA ? `_lenta${p.WLENTA}${p.LENTA_MID ? "_mid" : "_low"}` : "";
     return `penal_${p.A}x${p.B}x${p.H}${l}.svg`;
   }
@@ -3270,8 +3357,204 @@ function fileName(p) {
 /* ---------------------------------------------------------- отрисовка */
 
 function renderPreview(d) {
-  const svg = d.svg({ margin: 10, showGuides: false });
+  const m = state.showDims || state.showIds ? 30 : 10;
+  let svg = d.svg({ margin: m, showGuides: false });
+  let errs = [];
+  if (state.showDims) {
+    svg = svg.replace("</svg>", dimsMarkup(d, m) + "</svg>");
+    const key = dimKey();
+    if (key) {
+      const r = pairsMarkup(d, m, key);
+      svg = svg.replace("</svg>", r.svg + "</svg>");
+      errs = r.errs;
+    }
+  }
+  if (state.showIds) svg = svg.replace("</svg>", idsMarkup(d, m) + "</svg>");
   $("preview").innerHTML = svg;
+  const note = $("dimNote");
+  note.hidden = !errs.length;
+  note.textContent = errs.length ? "Не измерено: " + errs.join("; ") : "";
+  applyZoom();
+  updateDimToggle();
+}
+
+function applyZoom() {
+  const el = $("preview").querySelector("svg");
+  if (el) el.style.width = (state.zoom * 100) + "%";
+  $("zoomLabel").textContent = Math.round(state.zoom * 100) + "%";
+}
+
+/* Тестовая разметка: номер линии возле каждой линии/дуги, для записи нумерации.
+   Только в превью, в экспорт SVG/DXF не попадает. */
+function idsMarkup(d, m) {
+  const [x0, , , y1] = d.bbox;
+  const tx = (x, y) => [x - x0 + m, y1 - y + m];
+  let s = '<g class="ids" fill="#dc2626" font-family="sans-serif" font-size="9" font-weight="700" stroke="#fff" stroke-width="2.2" paint-order="stroke">';
+  for (const sg of d.segments) {
+    const name = /^\d+$/.test(String(sg.id)) ? "L" + sg.id : String(sg.id);
+    let x, y;
+    if (sg.kind === "line") {
+      x = (sg.a[0] + sg.b[0]) / 2; y = (sg.a[1] + sg.b[1]) / 2;
+    } else {
+      const ang = ((sg.start + sg.span / 2) * Math.PI) / 180;
+      x = sg.c[0] + sg.r * Math.cos(ang); y = sg.c[1] + sg.r * Math.sin(ang);
+    }
+    const p = tx(x, y);
+    s += `<text x="${p[0].toFixed(2)}" y="${p[1].toFixed(2)}">${name}</text>`;
+  }
+  return s + "</g>";
+}
+
+/* Размеры только для просмотра: в превью их нет в экспорте SVG/DXF.
+   Габарит — снаружи листа, диаметр каждого круглого отверстия — над ним. */
+function dimsMarkup(d, m) {
+  const [x0, , , y1] = d.bbox;
+  const tx = (x, y) => [x - x0 + m, y1 - y + m];
+  const W = d.w, H = d.h;
+  const top = m - 12, left = m - 12;
+  const t = (x) => fmt1(x);
+  let s = '<g class="dims" fill="#1e293b" stroke="#1e293b" stroke-width="0.3" font-family="sans-serif">';
+  s += `<line x1="${m}" y1="${top}" x2="${m + W}" y2="${top}"/>`;
+  s += `<line x1="${m}" y1="${top - 2}" x2="${m}" y2="${m - 1}"/>`;
+  s += `<line x1="${m + W}" y1="${top - 2}" x2="${m + W}" y2="${m - 1}"/>`;
+  s += `<text x="${m + W / 2}" y="${top - 2}" font-size="8" text-anchor="middle" stroke="none">${t(W)} мм</text>`;
+  s += `<line x1="${left}" y1="${m}" x2="${left}" y2="${m + H}"/>`;
+  s += `<line x1="${left - 2}" y1="${m}" x2="${m - 1}" y2="${m}"/>`;
+  s += `<line x1="${left - 2}" y1="${m + H}" x2="${m - 1}" y2="${m + H}"/>`;
+  s += `<text transform="translate(${left - 2},${m + H / 2}) rotate(-90)" font-size="8" text-anchor="middle" stroke="none">${t(H)} мм</text>`;
+  for (const sg of d.segments) {
+    if (sg.kind !== "arc" || !sg.full) continue;
+    const c = tx(sg.c[0], sg.c[1]);
+    s += `<text x="${c[0]}" y="${c[1] - sg.r - 1.5}" font-size="6" text-anchor="middle" stroke="none">Ø${t(2 * sg.r)}</text>`;
+  }
+  return s + "</g>";
+}
+
+const DIM_PAIRS = {
+  packet: ["L5-L7", "L4-L1", "L7-L8", "L5-X0"],
+  pachkaA: ["L32-L33", "L33-L47", "L102-L111", "L34-L8"],
+  pachkaB: ["L34-L8", "L32-L33", "L33-L47", "L105-L105Y"],
+  krysha: ["L1-1#X", "L3-3#Y", "L17-L18"],
+  penal: ["L27-27#X", "L28-28#Y", "L25-L24", "L23-L24"],
+  obech: ["L91-L92", "L92-L93", "L87-L85", "L89-L95"],
+  shub: ["L91-L92", "L92-L93", "L87-L204", "L199-L204", "L89-L200"]
+};
+
+function dimKey() {
+  if (state.typeId === "packet") return "packet";
+  if (state.typeId === "pachka") return state.pachkaType === "B" ? "pachkaB" : "pachkaA";
+  if (state.typeId === "krysha") return "krysha";
+  if (state.typeId === "penal") return state.pnKind === "obech" ? (state.pnShub === 1 ? "shub" : "obech") : "penal";
+  return null;
+}
+
+function segGeom(d, id) {
+  const sg = d.segments.find((s) => String(s.id) === id);
+  if (!sg || sg.kind !== "line") return null;
+  if (Math.abs(sg.a[1] - sg.b[1]) < 1e-6) return { o: "h", v: sg.a[1], sg };
+  if (Math.abs(sg.a[0] - sg.b[0]) < 1e-6) return { o: "v", v: sg.a[0], sg };
+  return { o: "x", sg };
+}
+
+function pairsMarkup(d, m, key) {
+  const [x0, , , y1] = d.bbox;
+  const tx = (x, y) => [x - x0 + m, y1 - y + m];
+  const f = (p) => p.toFixed(2);
+  const errs = [];
+  const placed = [];
+  const GAP = 8, STEP = 6, MAX = 20;
+  const lineM = (x1, y1_, x2, y2_) => {
+    const a = tx(x1, y1_), b = tx(x2, y2_);
+    return `<line x1="${f(a[0])}" y1="${f(a[1])}" x2="${f(b[0])}" y2="${f(b[1])}"/>`;
+  };
+  const textM = (x, y, label, rot) => {
+    const p = tx(x, y);
+    const tr = rot ? ` transform="rotate(${rot} ${f(p[0])} ${f(p[1])})"` : "";
+    return `<text x="${f(p[0])}" y="${f(p[1])}" font-size="7" font-weight="700" text-anchor="middle" stroke="none"${tr}>${label}</text>`;
+  };
+  const textBox = (x, y, label, rot) => {
+    const L = label.length * 4.2;
+    if (!rot) return [x - L / 2, y - 0.5, x + L / 2, y + 6];
+    return rot < 0 ? [x - 6.5, y - L / 2, x + 0.5, y + L / 2] : [x - 0.5, y - L / 2, x + 6.5, y + L / 2];
+  };
+  const union = (a, b) => [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[2], b[2]), Math.max(a[3], b[3])];
+  const place = (makers) => {
+    for (const mk of makers) {
+      for (let k = 0; k < MAX; k++) {
+        const it = mk(GAP + k * STEP);
+        if (!placed.some((q) => it.box[0] < q[2] && it.box[2] > q[0] && it.box[1] < q[3] && it.box[3] > q[1])) {
+          placed.push(it.box);
+          return it.svg;
+        }
+      }
+    }
+    const it = makers[0](GAP + (MAX - 1) * STEP);
+    placed.push(it.box);
+    return it.svg;
+  };
+  const vDim = (anchors, ticks, label) => place([1, -1].map((dir) => (off) => {
+    const ext = (a) => (dir > 0 ? a.top : a.bot);
+    const base = dir > 0 ? Math.max(...anchors.map(ext)) : Math.min(...anchors.map(ext));
+    const yd = base + dir * off;
+    const xs = [...anchors.map((a) => a.x), ...ticks];
+    const x1 = Math.min(...xs), x2 = Math.max(...xs), cx = (x1 + x2) / 2;
+    const ty = dir > 0 ? yd + 1.5 : yd - 7.5;
+    let svg = lineM(x1, yd, x2, yd);
+    for (const a of anchors) svg += lineM(a.x, ext(a), a.x, yd + dir);
+    for (const t of ticks) svg += lineM(t, yd - 1, t, yd + 1);
+    svg += textM(cx, ty, label, 0);
+    const lo = Math.min(yd, ...anchors.map(ext)), hi = Math.max(yd, ...anchors.map(ext));
+    return { svg, box: union([x1, lo, x2, hi], textBox(cx, ty, label, 0)) };
+  }));
+  const hDim = (anchors, label) => place([-1, 1].map((dir) => (off) => {
+    const ext = (a) => (dir < 0 ? a.left : a.right);
+    const base = dir < 0 ? Math.min(...anchors.map(ext)) : Math.max(...anchors.map(ext));
+    const xd = base + dir * off;
+    const ys = anchors.map((a) => a.y), y1_ = Math.min(...ys), y2_ = Math.max(...ys), cy = (y1_ + y2_) / 2;
+    const tx0 = xd + dir * 2, rot = dir < 0 ? -90 : 90;
+    let svg = lineM(xd, y1_, xd, y2_);
+    for (const a of anchors) svg += lineM(ext(a), a.y, xd + dir, a.y);
+    svg += textM(tx0, cy, label, rot);
+    const xl = Math.min(xd, ...anchors.map(ext)), xh = Math.max(xd, ...anchors.map(ext));
+    return { svg, box: union([xl, y1_, xh, y2_], textBox(tx0, cy, label, rot)) };
+  }));
+  const mnx = (g) => Math.min(g.sg.a[0], g.sg.b[0]), mxx = (g) => Math.max(g.sg.a[0], g.sg.b[0]);
+  const mny = (g) => Math.min(g.sg.a[1], g.sg.b[1]), mxy = (g) => Math.max(g.sg.a[1], g.sg.b[1]);
+  let s = "";
+  for (const spec of DIM_PAIRS[key]) {
+    const parts = spec.split("-");
+    if (parts.length !== 2) { errs.push(spec + ": одиночный размер пока не реализован"); continue; }
+    const pa = parts[0].trim().replace(/^L/, ""), pb = parts[1].trim().replace(/^L/, "");
+    const A = segGeom(d, pa);
+    if (!A) { errs.push(spec + ": нет линии " + pa); continue; }
+    if (pb === "X0") {
+      if (A.o !== "v") { errs.push(spec + ": линия не вертикальная"); continue; }
+      const xa = A.v, xb = d.var("X0");
+      s += vDim([{ x: xa, top: mxy(A), bot: mny(A) }], [xb], Math.abs(xa - xb).toFixed(1) + " мм");
+      continue;
+    }
+    const B = segGeom(d, pb);
+    if (!B) { errs.push(spec + ": нет линии " + pb); continue; }
+    if (A.o === "h" && B.o === "h") {
+      const va = A.v, vb = B.v;
+      s += hDim([{ y: va, left: mnx(A), right: mxx(A) }, { y: vb, left: mnx(B), right: mxx(B) }], Math.abs(va - vb).toFixed(1) + " мм");
+    } else if (A.o === "v" && B.o === "v") {
+      const xa = A.v, xb = B.v;
+      s += vDim([{ x: xa, top: mxy(A), bot: mny(A) }, { x: xb, top: mxy(B), bot: mny(B) }], [], Math.abs(xa - xb).toFixed(1) + " мм");
+    } else {
+      errs.push(spec + ": линии не параллельны осям X или Y");
+    }
+  }
+  return { svg: '<g class="pairdims" fill="#1e293b" stroke="#1e293b" stroke-width="0.3" font-family="sans-serif">' + s + "</g>", errs, boxes: placed };
+}
+
+function updateDimToggle() {
+  const b = $("dimToggle");
+  b.disabled = !state.result;
+  b.textContent = state.showDims ? "Скрыть размеры" : "Показать размеры";
+  const t = $("idToggle");
+  t.disabled = !state.result;
+  t.textContent = state.showIds ? "Скрыть номера линий" : "Номера линий (тест)";
 }
 
 /* Длина реза раскладывается на две части:
@@ -3482,6 +3765,7 @@ function showError(msg) {
     '<div class="empty"><p>Развёртка не построена</p></div>';
   state.result = null;
   state.lastSvg = null;
+  updateDimToggle();
 }
 
 /* -------------------------------------------------------------- файл */
@@ -3539,6 +3823,23 @@ buildHdPresets();
 syncTypeFields();
 
 $("dlSvg").addEventListener("click", download);
+$("dimToggle").addEventListener("click", () => {
+  state.showDims = !state.showDims;
+  if (state.result) renderPreview(state.result);
+  updateDimToggle();
+});
+function setZoom(z) {
+  state.zoom = Math.min(4, Math.max(0.5, Math.round(z * 100) / 100));
+  applyZoom();
+}
+$("zoomIn").addEventListener("click", () => setZoom(state.zoom * 1.25));
+$("zoomOut").addEventListener("click", () => setZoom(state.zoom / 1.25));
+$("zoomReset").addEventListener("click", () => setZoom(1));
+$("idToggle").addEventListener("click", () => {
+  state.showIds = !state.showIds;
+  if (state.result) renderPreview(state.result);
+  updateDimToggle();
+});
 $("dlDxf").addEventListener("click", downloadDxf);
 
 /* Пересчёт сам, без кнопки. Небольшая задержка — чтобы не считать на каждый
@@ -3558,10 +3859,10 @@ const LIMITS = {
   pZ: 3,     // длина замка
   pZF: 3,    // глубина замка
   pKL: 0,    // отступ клапана — ноль допустим
-  pnA: 1,    // пенал: длина
-  pnB: 1,    // пенал: ширина
-  pnH: 1,    // пенал: высота дна
-  pnE: 11,   // пенал: борт
+  pnA: 30,   // пенал: длина, минимум
+  pnB: 20,   // пенал: ширина, минимум
+  pnH: 12,   // пенал: высота дна, минимум
+  pnE: 8,    // пенал: борт, минимум
   pnWLenta: 15, // пенал: ширина ленты
   pZp: 0,    // усиление замков — ноль допустим
   pHDV: 1,
@@ -3591,7 +3892,7 @@ function clampAll() {
 const ALL_INPUTS = ["kA", "kB", "kHD", "kHK", "kED", "kEK", "kRD", "kRK",
                     "A", "B", "H", "U", "pA", "pB", "pH", "pE", "pD",
                     "pZ", "pZp", "pKL", "pZF", "pHDV", "pHDN",
-                    "pnA", "pnB", "pnH", "pnE", "pnWLenta"];
+                    "pnA", "pnB", "pnH", "pnE", "pnWLenta", "pnRot"];
 
 /* Пустое поле в видимом блоке — не считаем, оставляем прошлый чертёж. */
 function hasEmptyField() {
