@@ -552,6 +552,94 @@ input[type="number"]:disabled { background: var(--bg); color: var(--ink-3); }
     </div>
 
 
+    <!-- ================= ПАЧКА-ЛХ ================= -->
+    <div id="pachkaLHFields" hidden>
+
+      <div class="field">
+        <label class="lbl">Материал</label>
+        <div class="segmented row" id="lhMatSwitch" role="radiogroup"></div>
+        <p class="hint" id="lhMatHint"></p>
+      </div>
+
+      <div class="grid2">
+        <div class="field">
+          <label class="lbl" for="lhA">Длина <span class="unit">A, мм</span></label>
+          <input id="lhA" type="number" inputmode="decimal" min="20" step="1" value="100">
+        </div>
+        <div class="field">
+          <label class="lbl" for="lhD">Клапан склейки <span class="unit">D, мм</span></label>
+          <input id="lhD" type="number" inputmode="decimal" min="1" step="1" value="15">
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="field">
+          <label class="lbl" for="lhB">Ширина <span class="unit">B, мм</span></label>
+          <input id="lhB" type="number" inputmode="decimal" min="20" step="1" value="100">
+        </div>
+        <div class="field">
+          <label class="lbl" for="lhE">Клапан крышки <span class="unit">E, мм</span></label>
+          <input id="lhE" type="number" inputmode="decimal" min="1" step="1" value="20">
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="field">
+          <label class="lbl" for="lhH">Высота <span class="unit">H, мм</span></label>
+          <input id="lhH" type="number" inputmode="decimal" min="20" step="1" value="200">
+        </div>
+        <div class="field">
+          <label class="lbl" for="lhKL">Отступ клапана <span class="unit">KL, мм</span></label>
+          <input id="lhKL" type="number" inputmode="decimal" min="0" step="1" value="5">
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="field">
+          <label class="lbl" for="lhZ">Длина замка <span class="unit">Z, мм</span></label>
+          <input id="lhZ" type="number" inputmode="decimal" min="0" step="1" value="10">
+        </div>
+        <div class="field">
+          <label class="lbl" for="lhZF">Глубина замка <span class="unit">ZF, мм</span></label>
+          <input id="lhZF" type="number" inputmode="decimal" min="0" step="1" value="5">
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="field">
+          <label class="lbl" for="lhKD">Глубина клапана <span class="unit">KD, мм</span></label>
+          <input id="lhKD" type="number" inputmode="decimal" min="1" step="1" value="33">
+          <div class="chips" id="lhKDChips"></div>
+        </div>
+        <div class="field">
+          <label class="lbl" for="lhKDR">Глубина хвоста <span class="unit">KDR, мм</span></label>
+          <input id="lhKDR" type="number" inputmode="decimal" min="0" step="1" value="30">
+          <div class="chips" id="lhKDRChips"></div>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="field">
+          <label class="lbl" for="lhHDV">Клапан верх <span class="unit">HD_V, мм</span></label>
+          <input id="lhHDV" type="number" inputmode="decimal" min="1" step="0.5" value="49">
+          <div class="chips" id="lhHDVChips"></div>
+        </div>
+        <div class="field">
+          <label class="lbl" for="lhSKR">Скругление хвоста <span class="unit">SKRUGDK, мм</span></label>
+          <input id="lhSKR" type="number" inputmode="decimal" min="0" step="1" value="2">
+          <div class="chips" id="lhSKRChips"></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="lbl">Хвост</label>
+        <div class="segmented row" id="lhTailSwitch" role="radiogroup"></div>
+        <p class="hint" id="lhTailHint"></p>
+      </div>
+
+    </div>
+
+
     <!-- ================= КРЫШКА-ДНО ================= -->
     <div id="kryshaFields" hidden>
 
@@ -2715,9 +2803,390 @@ R11 | рез | X2+(X3-x2)/2 | HY1+20+1.25*ROT | ROT/2 | 0 | 360 | EXTRA_HOLE*HOL
 Борт не меньше 8 | E-7.9999 | ширина борта E={E} должна быть не меньше 8 | стоп
 `;
 
+/* ============================================================
+   ПАЧКА-ЛХ — модель (клапаны, касательные переходы, скругления хвоста)
+   ============================================================ */
+const MODEL_PACHKA_LH = `
+# Made by Yauheni Padloukin @evgenpdl & Claude Haiku 5.5
+# Author: Yauheni Padloukin @evgenpdl | Co-author: Claude Haiku 5.5# ============================================================
+#  ПАЧКА-ЛХ  (тестовая модель)
+# ============================================================
+#
+#  ВХОДНЫЕ ПАРАМЕТРЫ помечаются «?». Они появляются полями на
+#  странице, рядом видно подсказки — нажми и подставится само.
+#
+#    A    ширина
+#    B    глубина
+#    H    высота
+#    D    клапан склейки        картон 15 / гофра 20
+#    E    глубина клапана крышки
+#    Z    замок                 плечо пылевого, на крышке Z+3
+#    KL   новый вход           пока ни на что не влияет
+#    ZF   новый вход           пока ни на что не влияет
+#    KLR  = KL + ZF*COS(45)            внутренняя расчётная величина
+#    HD_V высота пылевого клапана ВЕРХ    (4 варианта в подсказках)
+#    KD   глубина клапана             (кнопки «B/2» и «B/3»)
+#    SKRUGDK единый радиус скругления хвоста — 0 не скруглять,
+#             макс = min(ROUND(KD/2), ROUND((ROUND((X62-X60)/3)-2*(0.25+0.25*MAT))/2))
+#    TAIL_D хвост двойной: 1 — двойной, 0 — одинарный
+#
+#  ПРЕДЕЛ КЛАПАНОВ
+#    Клапан не может быть выше A-3. Если введешь больше — подрежется
+#    автоматически, построение не останавливается.
+#      CUT_V / CUT_N  — на сколько подрезано (0, если в пределах)
+#    MAT  материал              0 картон / 1 гофра
+#
+#  ОТ МАТЕРИАЛА ЗАВИСИТ
+#    t      допуск              0,5 / 1,5
+#    RARC   радиус дуги         1 / 1,5
+#    OFF3   отступ 3 мм         3 / 0  — на гофре пропадает,
+#                               там дуга Ø3 = R1,5
+#    OFF5   отступ 5 мм         константа
+# ============================================================
+#
+#  ФУНКЦИИ
+#    ROUND(x) ROUND(x,шаг)  CEIL(x)  FLOOR(x)  ABS(x)  SQRT(x)  MIN(a,b)  MAX(a,b)
+#    COS(угол)  SIN(угол)  ATAN2(y,x)   — углы в градусах
+#    DIST(x1,y1,x2,y2)      — расстояние между точками
+#    ANGLE(x1,y1,x2,y2)     — угол направления от точки 1 к точке 2, 0..360
+#
+#  КАСАТЕЛЬНАЯ К ОКРУЖНОСТИ
+#    Аргументы: (Xc, Yc, R, Px, Py, сторона)
+#      Xc,Yc,R — направляющая окружность
+#      Px,Py   — внешняя точка, из которой идёт касательная
+#      сторона — 1 или -1: какая из двух касательных (по умолчанию 1)
+#
+#    TANX(...)    X точки касания
+#    TANY(...)    Y точки касания
+#    TANANG(...)  угол точки касания от центра, 0..360 — подставляй в дугу
+#    TLEN(...)    длина касательной от внешней точки до касания
+#
+#  ССЫЛКИ НА ТОЧКИ
+#    @L1.S.x  @L1.E.x  — X начала и конца линии L1
+#    @L1.S.y  @L1.E.y  — Y начала и конца
+#    @L1.C.x  @L1.C.y  — центр дуги
+#    @R1.R             — радиус окружности R1
+#
+#  ПРИМЕР: касательная и дуга от точки касания
+#    TX = TANX(CX, CY, CR, PX, PY, 1)
+#    TY = TANY(CX, CY, CR, PX, PY, 1)
+#    TA = TANANG(CX, CY, CR, PX, PY, 1)
+#    L2 | рез | TX | TY | PX | PY          касательная
+#    R2 | рез | CX | CY | CR | TA | 160   дуга от касания до 160°
+#
+#  УСЛОВИЕ У ЛИНИИ И ОКРУЖНОСТИ
+#    Последнее поле — необязательное условие. Ноль — не рисовать,
+#    не ноль — рисовать. Пусто — рисовать всегда.
+#
+#      L1 | биговка | X1 | -HM | X1 | HM | MAT=0     только картон
+#      L2 | рез     | X0 | HM  | X1 | HM  | MAT=1     только гофра
+#      R2 | рез     | CX | CY | CR | TA | 160 | MAT=1
+#
+#    Сравнения:  =  и  <>  (не равно). Результат 1 или 0.
+#    Можно и просто число: MAT, или выражение: MAT<>1.
+#    Условие — выключатель: линия либо есть, либо её нет.
+# ============================================================
+
+[СЕТКА]
+
+CXR = X7+(ROUND((X29*X29+(Y5-Y3)*(Y5-Y3)-X7*X7)/(2*(X29-X7))-X7))
+DXR = SQRT((ROUND((X29*X29+(Y5-Y3)*(Y5-Y3)-X7*X7)/(2*(X29-X7))-X7))*(ROUND((X29*X29+(Y5-Y3)*(Y5-Y3)-X7*X7)/(2*(X29-X7))-X7))-(Y5-Y3)*(Y5-Y3))
+
+# --- входы ---
+
+A    = ?       # =100  ; длина
+D    = ?       # =D0 ; 15 @D0 ; 20 @D1
+B    = ?       # =100  ; ширина
+E    = ?       # =20  ; высота клапана крышки
+H    = ?       # =200  ; высота
+KL   = ?       # =5 ; глубина отступа пылевого клапана
+Z    = ?       # =10 ; длина замка
+ZF   = ?       # =5 ; глубина замка
+HD_V = ?       # =HD_AVG ; Среднее @HD_AVG ; Максимальное @HD_MAX ; Оптимальное @HD_OPT ; Усиленное @HD_STR
+KD     = ?      # =33 ; глубина клапана  ; Примерное B/2 @KD_B2 ; Примерное B/3 @KD_B3
+KDR     = ?      # =KDR_AVG ; Среднее @KDR_AVG ; Максимальное @KDR_MAX
+SKRUGDK = ?     # =2 ; радиус скругления хвоста; 0 — не скруглять; макс min(KD/2, треть свободной ширины) ; Без скругления @SKR0 ; Максимум @SKRMAX
+TAIL_D = ?      # =0 ; хвост: 0 — одинарный, 1 — двойной
+MAT  = ?       # =0 ; картон @MAT=0 & D=D0 ; гофра @MAT=1 & D=D1
+
+# --- от материала ---
+t    = 0.5+MAT*1.0
+RARC = 1+MAT*0.5
+OFF3 = 3*(1-MAT)
+OFF5 = 5
+
+# --- от KL и ZF ---
+KLR  = KL+ZF*COS(45)                          # внутренняя расчётная величина
+
+# --- базовые значения ---
+D0 = 15
+D1 = 20
+
+# --- производные ---
+HM = H/2
+
+# жёсткий предел высоты клапана: ширина заготовки минус 3 мм
+# фактическая высота = MIN(заданная, предел) — не останавливаем, а подрезаем
+HD_LIM = A-3
+HD_VF  = MIN(HD_V, HD_LIM)
+CUT_V  = MAX(0, HD_V-HD_LIM)       # насколько подрезан верх
+
+# --- четыре варианта высоты пылевого клапана ---
+HD_AVG = A/2-1                       # среднее
+HD_MAX = B+E-t                       # максимальное
+HD_OPT = B                           # оптимальное
+
+# --- варианты глубины клапана KD (кнопки «Примерное — B/2» и «B/3») ---
+KD_B2 = ROUND(B/2)                   # примерно половина ширины
+KD_B3 = ROUND(B/3)                   # примерно треть ширины
+
+KDR_AVG = MIN(0.75*B-(ROUND(B/2)+(0.25+0.25*MAT)),(A/2-KD-1))                   # среднее 
+KDR_MAX = MIN((A/2-KD-1)*(1-TAIL_D)+(ROUND(2*KD/3))*(TAIL_D),(A/2-KD-1))                      # максимальное
+
+# --- скругления хвоста ---
+# SKRUGDK — единый радиус для всех углов хвоста.
+# 0 — не скруглять совсем. Сверху ограничен наименьшим из двух:
+#   ROUND(KD/2)                                  — половина глубины клапана
+#   ROUND((ROUND((X62-X60)/3)-2*(0.25+0.25*MAT))/2) — половина трети свободной ширины
+SKRBIG  = ROUND((ROUND((X62-X60)/3)-2*(0.25+0.25*MAT))/2)
+SKRMAX  = MAX(0, MIN(ROUND(KD/3)-2, (1-TAIL_D)*(ROUND(KD/2)-3) + TAIL_D*SKRBIG))
+SKRUG_V = MIN(MAX(SKRUGDK,0), SKRMAX)
+SKR0    = 0
+
+# усиленное: A*0.75 или B*0.75, округление до 0,5,
+# берётся то, что попадает в A/2 < HD < B+E-t
+HD_STR_A = ROUND(A*0.75, 0.5)
+HD_STR_B = ROUND(B*0.75, 0.5)
+OK_A = MIN(1, MAX(0, (HD_STR_A-A/2)*1000)) * MIN(1, MAX(0, (B+E-t-HD_STR_A)*1000))
+OK_B = MIN(1, MAX(0, (HD_STR_B-A/2)*1000)) * MIN(1, MAX(0, (B+E-t-HD_STR_B)*1000))
+HD_STR = HD_STR_A*OK_A + HD_STR_B*OK_B*(1-OK_A) + HD_OPT*(1-OK_B)*(1-OK_A)
+
+# --- оси X: панели B-t | A | B | A | D ---
+X0 = 0
+X1 = B-t
+X2 = X1+A
+X3 = X2+B
+X4 = X3+A
+X5 = X4+D
+
+X6 = X4+6                            # ёжик, 6 мм от биговки
+TAIL   = 1                           # хвост есть всегда
+X_TAIL = X5+KD*(1+TAIL_D)          # внешний край хвоста
+
+X7 = X1+t                            # допуск крышки
+X8 = X2-t                            # допуск крышки
+X9 = X3+t                            # допуск крышки
+X10 = X4-t                            # допуск крышки
+
+X11 = X1-t                            # допуск клапана
+X12 = X2+t                            # допуск клапана
+X13 = X3-t                            # допуск клапана
+
+X21 = 3
+X22 = 5
+X23 = X1-3
+X24 = X1-5
+X25 = X2+3
+X26 = X2+5
+X27 = X3-3
+X28 = X3-5
+X29 = X1+Z+1.5
+
+X60=X1+KD
+X62=X2-KD
+X63=X60+ROUND((X62-X60)/3)
+X64=X62-ROUND((X62-X60)/3)
+X65=X60+ROUND((X62-X60)/2)
+
+X573=X3+KD
+X574=X4-KD
+X575=X573+ROUND((X62-X60)/3)
+X576=X574-ROUND((X62-X60)/3)
+X577=X573+ROUND((X62-X60)/2)
+X860=X1-ROUND(B/2)-(0.25+0.25*MAT)
+X861=X2+ROUND(B/2)+(0.25+0.25*MAT)
+
+# границы линий хвоста с учётом допуска — чтобы не повторять формулу
+XS1 = X573+(0.25+0.25*MAT)
+XS2 = X575-(0.25+0.25*MAT)
+XS3 = X576+(0.25+0.25*MAT)
+XS4 = X574-(0.25+0.25*MAT)
+
+# --- концы биговок внизу: пересечение с резом (L227 / L228 / L224) на линии Y=0 ---
+# касательная к R1/R2/R3 -> отрезок реза P-T -> x при y=0
+TP1X = TANX(X1, 0, 1+(0.5*MAT), X860, Y860, -1)
+TP1Y = TANY(X1, 0, 1+(0.5*MAT), X860, Y860, -1)
+XB1  = X860+(TP1X-X860)*(0-Y860)/(TP1Y-Y860)
+TP2X = TANX(X2, 0, 1+(0.5*MAT), X861, Y860, 1)
+TP2Y = TANY(X2, 0, 1+(0.5*MAT), X861, Y860, 1)
+XB2  = X861+(TP2X-X861)*(0-Y860)/(TP2Y-Y860)
+PX3  = X573+(0.25+0.25*MAT)
+TP3X = TANX(X3, 0, 1+(0.5*MAT), PX3, Y11, 1)
+TP3Y = TANY(X3, 0, 1+(0.5*MAT), PX3, Y11, 1)
+XB3  = PX3+(TP3X-PX3)*(0-Y11)/(TP3Y-Y11)
+
+# --- оси Y ---
+YB = 0                              # нижняя кромка: ниже Y0 ничего не остаётся
+Y0 = 0                               # ось симметрии
+Y1 = H                             # линия верха
+Y2 = Y1+t                              # верхняя биговка крышки
+Y3 = Y1+B                              # верх крышки
+Y4 = Y3-t                              # нижняя биговка крышки
+Y5 = Y4+E
+Y6 = Y1+HD_VF                      # подрезано пределом A-3
+
+Y11=Y0-ROUND(B/2)
+Y12=Y0-ROUND(B*0.75)
+Y860=Y0-KD-(0.25+0.25*MAT)
+Y840=Y860-KDR
+
+[ЛИНИИ]
+# --- ёжик на клапане склейки ---
+L0  | ежик| X6 | 6 | X6 | Y1-6
+# --- замки клапанов ---
+L1  | рез| X0 | Y1 | X0 | Y1+Z
+L2  | рез| X13 | Y1 | X13 | Y1+Z
+L3  | рез| X4 | Y0 | X5 | 5
+L6  | рез| X13 | Y1 | X4 | Y1
+L37 | рез| X0 | Y1+Z | X0+ZF*COS(45) | Y1+Z+ZF*SIN(45)
+L38 | рез| X0+ZF*COS(45) | Y1+Z+ZF*SIN(45) | X0+KLR | Y6
+L39 | рез| X13 | Y1+Z | X13-ZF*COS(45) | Y1+Z+ZF*SIN(45)
+L40 | рез| X13-ZF*COS(45) | Y1+Z+ZF*SIN(45) | X13-KLR | Y6
+# --- Клапан склейки ---
+L7  | рез| X4 | Y1 | X5 | Y1-5
+L8  | рез| X5 | Y1-5 | X5 | 5
+# --- Верхняя крышка ---
+L10  | рез| X1 | Y2 | X1 | Y3
+L11  | рез| X2 | Y2 | X2 | Y3
+L12  | рез| X1 | Y3 | X1+(Z+3) | Y3
+L13  | рез| X2 | Y3 | X2-(Z+3) | Y3
+L14  | рез| X1+(Z+3) | Y3 | X1+(Z+3) | Y3-3
+L15  | рез| X2-(Z+3) | Y3 | X2-(Z+3) | Y3-3
+# --- Нижняя крышка ---
+L22 | рез | X26 | Y6 | X13-KLR | Y6
+L23 | рез | X24 | Y6 | X0+KLR | Y6
+L31 | рез | X0 | Y1 | X0 | YB
+L32 | биговка | X1 | Y2 | X1 | YB+(1+(0.5*MAT))
+L33 | биговка | X2 | YB+(1+(0.5*MAT)) | X2 | Y2
+L34 | биговка | X4 | Y1 | X4 | YB
+L36 | биговка | X1 | Y2 | X2 | Y2
+L45 | биговка | X1+Z+3 | Y4 | X2-Z-3 | Y4
+L47 | биговка | X3 | Y1 | X3 | YB+(1+(0.5*MAT))
+L50 | рез | CXR-DXR | Y5 | X8-(ROUND((X29*X29+(Y5-Y3)*(Y5-Y3)-X7*X7)/(2*(X29-X7))-X7))+DXR | Y5
+
+# --- соединение для картона ---
+# --- 1 ---
+L100 | рез | X23 | Y1+3 | TANX(X1-1, Y2, 1, X23, Y1+3, 1) | TANY(X1-1, Y2, 1, X23, Y1+3, 1) | MAT=0
+L101 | рез | X24 | Y6 | X23 | Y1+3| MAT=0
+L102 | биговка | X0 | Y1 | X1-1 - SQRT(1*1 - (Y1-Y2)*(Y1-Y2)) | Y1| MAT=0
+# --- 2 ---
+L103 | рез | X25 | Y1+3 | TANX(X2+1, Y2, 1, X25, Y1+3, -1) | TANY(X2+1, Y2, 1, X25, Y1+3, -1)| MAT=0
+L104 | рез | X25 | Y1+3 | X26 | Y6| MAT=0
+L105 | биговка | X13 | Y1 | X2+1 + SQRT(1*1 - (Y1-Y2)*(Y1-Y2)) | Y1| MAT=0
+# --- 3 ---
+# --- 4 ---
+# --- соединение для гофры---
+# --- 1 ---
+L201 | рез | X24 | Y6 | TANX(X1-1.5, Y2, 1.5, X23, Y2+3, 1) | TANY(X1-1.5, Y2, 1.5, X23, Y2+3, 1) | MAT=1
+L202 | биговка | X0 | Y1 | X1-1.5 - SQRT(1.5*1.5 - (Y1-Y2)*(Y1-Y2)) | Y1| MAT=1
+# --- 2 ---
+L203 | рез | X26 | Y6 | TANX(X2+1.5, Y2, 1.5, X25, Y2+3, -1) | TANY(X2+1.5, Y2, 1.5, X25, Y2+3, -1) | MAT=1
+L204 | биговка | X13 | Y1 | X2+1.5 - SQRT(1.5*1.5 - (Y1-Y2)*(Y1-Y2)) | Y1| MAT=1
+# --- 3 ---
+# --- 4 ---
+
+# --- хвост ---
+# концы линий укорочены на SKRUG_V — тангенсная точка скругления;
+# при SKRUG_V=0 концы возвращаются ровно в угол
+L205 | рез | XS1 | Y11 | XS1 | Y12+SKRUG_V
+L206 | рез | XS1+SKRUG_V | Y12 | XS2-SKRUG_V*TAIL_D | Y12
+L207 | рез | X575 | Y12 | X576 | Y12 | 1-TAIL_D
+L208 | рез | XS3+SKRUG_V*TAIL_D | Y12 | XS4-SKRUG_V | Y12
+L209 | рез | XS4 | Y12+SKRUG_V | XS4 | Y11
+L210 | рез | XS2 | Y11 | XS2 | Y12+SKRUG_V | TAIL_D
+L211 | рез | XS3 | Y11 | XS3 | Y12+SKRUG_V | TAIL_D
+L212 | рез | X1+(1+(0.5*MAT)) | Y12 | X60-SKRUG_V | Y12
+L213 | рез | X60 | Y12+SKRUG_V | X60 | Y11
+L214 | рез | X60 | Y11 | X63 | Y11
+L215 | рез | X63 | Y11 | X64 | Y11| 1-TAIL_D
+L216 | рез | X64 | Y11 | X62 | Y11
+L217 | рез | X62 | Y11 | X62 | Y12+SKRUG_V
+L218 | рез | X62+SKRUG_V | Y12 | X2-(1+(0.5*MAT)) | Y12
+L219 | рез | X63 | Y11 | X63 | Y12+SKRUG_V | TAIL_D
+L220 | рез | X63+SKRUG_V | Y12 | X64-SKRUG_V | Y12 | TAIL_D
+L221 | рез | X64 | Y12+SKRUG_V | X64 | Y11 | TAIL_D
+L222 | рез | X575 | Y11 | XS3 | Y11| TAIL_D
+L223 | рез | XS4 | Y11 | X4 | Y0
+L224 | рез | X573+(0.25+0.25*MAT) | Y11 | TANX(X3, 0, 1+(0.5*MAT), X573+(0.25+0.25*MAT), Y11, 1) | TANY(X3, 0, 1+(0.5*MAT), X573+(0.25+0.25*MAT), Y11, 1)
+L225 | рез | X2-(1+(0.5*MAT)) | Y12 | X2-(1+(0.5*MAT)) | Y0
+L226 | рез | X1+(1+(0.5*MAT)) | Y12 | X1+(1+(0.5*MAT)) | Y0
+L227 | рез | X860 | Y860 | TANX(X1, 0, 1+(0.5*MAT), X860, Y860, -1) | TANY(X1, 0, 1+(0.5*MAT), X860, Y860, -1)
+L228 | рез | X861 | Y860 | TANX(X2, 0, 1+(0.5*MAT), X861, Y860, 1) | TANY(X2, 0, 1+(0.5*MAT), X861, Y860, 1)
+L229 | рез | X860 | Y860 | X860 | Y840+SKRUG_V
+L230 | рез | X860-SKRUG_V | Y840 | X0 | Y840
+L231 | рез | X0 | Y840 | X0 | Y0
+L232 | рез | X861 | Y860 | X861 | Y840+SKRUG_V
+L233 | рез | X861+SKRUG_V | Y840 | X3-(1+(0.5*MAT)) | Y840
+L234 | рез | X3-(1+(0.5*MAT)) | Y840 | X3-(1+(0.5*MAT)) | Y0
+L235 | биговка | X0 | Y0 | XB1 | Y0
+L236 | биговка | X1+(1+(0.5*MAT)) | Y0 | X2-(1+(0.5*MAT)) | Y0
+L237 | биговка | XB2 | Y0 | X3-(1+(0.5*MAT)) | Y0
+L238 | биговка | XB3 | Y0 | X4 | Y0
+
+[ОКРУЖНОСТИ]
+R50 | рез | CXR | Y3 | ROUND((X29*X29+(Y5-Y3)*(Y5-Y3)-X7*X7)/(2*(X29-X7))-X7) | ATAN2(Y5-Y3, -DXR) | 180
+R51 | рез | X8-(ROUND((X29*X29+(Y5-Y3)*(Y5-Y3)-X7*X7)/(2*(X29-X7))-X7)) | Y3 | ROUND((X29*X29+(Y5-Y3)*(Y5-Y3)-X7*X7)/(2*(X29-X7))-X7) | 0 | 180-ATAN2(Y5-Y3, -DXR)
+# --- соединение для картона ---
+# --- 1 ---
+R100 | рез | X1-1 | Y2 | 1 | TANANG(X1-1, Y2, 1, X23, Y1+3, 1) | 360 | MAT=0 
+# --- 2 ---
+R101 | рез | X2+1 | Y2 | 1 | 180 | TANANG(X2+1, Y2, 1, X25, Y1+3, -1) | MAT=0
+# --- 3 ---
+# --- 4 ---
+# --- соединение для гофры---
+# --- 1 ---
+R201 | рез | X1-1.5 | Y2 | 1.5 | TANANG(X1-1.5, Y2, 1.5, X23, Y2+3, 1) | 360 | MAT=1 
+# --- 2 ---
+R202 | рез | X2+1.5 | Y2 | 1.5 | 180 | TANANG(X2+1.5, Y2, 1.5, X25, Y2+3, -1) | MAT=1 
+# --- 3 ---
+# --- 4 ---
+
+R1 | рез | X1 | Y0 | 1+(0.5*MAT) | 0 | TANANG(X1, 0, 1+(0.5*MAT), X860, Y860, -1)
+R2 | рез | X2 | Y0 | 1+(0.5*MAT) | TANANG(X2, 0, 1+(0.5*MAT), X861, Y860, 1) | 180
+R3 | рез | X3 | Y0 | 1+(0.5*MAT) | TANANG(X3, 0, 1+(0.5*MAT), X573+(0.25+0.25*MAT), Y11, 1) | 180
+
+# --- скругления хвоста (SKRUGDK) ---
+# центр = точка касания минус радиус; дуга всегда 90 градусов
+# R110: L229-L230   R111: L212-L213   R112: L219-L220   R113: L221-L220
+# R114: L217-L218   R115: L232-L233   R116: L205-L206   R117: L206-L210
+# R118: L211-L208   R119: L208-L209
+R110 | рез | X860-SKRUG_V | Y840+SKRUG_V | SKRUG_V | 270 | 0   | SKRUG_V
+R111 | рез | X60-SKRUG_V  | Y12+SKRUG_V  | SKRUG_V |270   | 360  | SKRUG_V
+R112 | рез | X63+SKRUG_V  | Y12+SKRUG_V  | SKRUG_V |180  | 270 | SKRUG_V*TAIL_D
+R113 | рез | X64-SKRUG_V  | Y12+SKRUG_V  | SKRUG_V | 270 | 0   | SKRUG_V*TAIL_D
+R114 | рез | X62+SKRUG_V  | Y12+SKRUG_V  | SKRUG_V | 180   | 270  | SKRUG_V
+R115 | рез | X861+SKRUG_V | Y840+SKRUG_V | SKRUG_V | 180 | 270| SKRUG_V
+R116 | рез | XS1+SKRUG_V  | Y12+SKRUG_V  | SKRUG_V | 180| 270| SKRUG_V
+R117 | рез | XS2-SKRUG_V  | Y12+SKRUG_V  | SKRUG_V | 270   | 0| SKRUG_V*TAIL_D
+R118 | рез | XS3+SKRUG_V  | Y12+SKRUG_V  | SKRUG_V | 180| 270| SKRUG_V*TAIL_D
+R119 | рез | XS4-SKRUG_V  | Y12+SKRUG_V  | SKRUG_V | 270 | 0   | SKRUG_V
+
+[ПРОВЕРКИ]
+# имя | условие (больше нуля = выполнено) | сообщение | стоп
+Ширина больше нуля     | A-1              | A должна быть больше 1 мм | 1
+Глубина больше допуска | B-t-1            | B должна быть больше допуска | 1
+# эти проверки смотрят на фактическую высоту, то есть уже подрезанную
+
+Верхний клапан не выше крышки | B+E-t-HD_VF | верхний пылевой клапан выше клапана крышки | 0
+
+# радиус скругления упирается в предел min(KD/2, треть свободной ширины) (мягкая проверка)
+Радиус скругления в пределе | SKRMAX-SKRUGDK+0.001 | SKRUGDK больше предела — радиус подрезан до SKRMAX | 0
+`;
+
 const PACKAGE_TYPES = [
   { id: "packet", name: "Пакет",            model: MODEL_PACKET, ready: true  },
   { id: "pachka", name: "Пачка-пачка",      model: MODEL_PACHKA, ready: true  },
+  { id: "pachkaLH", name: "Пачка-ЛХ",        model: MODEL_PACHKA_LH, ready: true  },
   { id: "krysha", name: "Крышка-дно",         model: MODEL_KRYSHA, ready: true  },
   { id: "penal",  name: "Пенал",                model: MODEL_PENAL,  ready: true  },
 ];
@@ -2765,6 +3234,9 @@ const state = {
   parts: 1,
   frame: false,
   pachkaType: "A",        // A — как в модели, B — срез и отражение
+  lhMat: 0,               // Пачка-ЛХ: 0 картон / 1 гофра
+  lhTail: 0,              // Пачка-ЛХ: TAIL_D, авто-правило по A и KD
+  lhTailAutoSig: null,    // последняя пара A|KD, для которой правило уже сработало
   mat: 0,                 // 0 картон / 1 гофра
   lastSvg: null,
   showDims: false,
@@ -2804,6 +3276,7 @@ function buildTypeSelect() {
 function syncTypeFields() {
   $("packetFields").hidden = state.typeId !== "packet";
   $("pachkaFields").hidden = state.typeId !== "pachka";
+  $("pachkaLHFields").hidden = state.typeId !== "pachkaLH";
   $("kryshaFields").hidden = state.typeId !== "krysha";
   $("penalFields").hidden = state.typeId !== "penal";
   syncKryshaFields();
@@ -3011,6 +3484,122 @@ function applyPenalLimits() {
   if (B !== null && H !== null && H >= B) put("pnH", B - 1);
 }
 
+/* ---------------------------------------------------------- Пачка-ЛХ */
+
+/* Авто-правило двойного хвоста: (A-2*KD)/3 >= KD.
+   Срабатывает только при смене A или KD, поэтому ручное переключение
+   кнопкой сохраняется до следующей смены A или KD. */
+function lhAutoTail() {
+  const A = Number(String($("lhA").value).replace(",", "."));
+  const KD = Number(String($("lhKD").value).replace(",", "."));
+  if (!Number.isFinite(A) || !Number.isFinite(KD) || KD <= 0) return false;
+  const sig = A + "|" + KD;
+  if (sig === state.lhTailAutoSig) return false;
+  state.lhTailAutoSig = sig;
+  const want = ((A - 2 * KD) / 3 >= KD - 1e-9) ? 1 : 0;
+  if (state.lhTail !== want) {
+    state.lhTail = want;
+    buildLhTailSwitch();
+    return true;
+  }
+  return false;
+}
+
+function buildLhTailSwitch() {
+  const box = $("lhTailSwitch");
+  if (!box) return;
+  box.innerHTML = "";
+  const items = [
+    [0, "Одинарный", "TAIL_D 0 — хвост одинарный"],
+    [1, "Двойной", "TAIL_D 1 — хвост двойной"],
+  ];
+  for (const [v, label, hint] of items) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.role = "radio";
+    b.textContent = label;
+    b.title = hint;
+    b.setAttribute("aria-checked", String(state.lhTail === v));
+    b.addEventListener("click", () => {
+      state.lhTail = v;
+      buildLhTailSwitch();
+      updateLhTailHint();
+      calc();
+    });
+    box.appendChild(b);
+  }
+  updateLhTailHint();
+}
+
+function updateLhTailHint() {
+  const el = $("lhTailHint");
+  if (!el) return;
+  el.textContent = state.lhTail
+    ? "двойной хвост: десять скруглений, радиус ограничен зазором средней панели"
+    : "одинарный хвост: шесть скруглений, радиус ограничен KD/2";
+}
+
+function buildLhMatSwitch() {
+  const box = $("lhMatSwitch");
+  if (!box) return;
+  box.innerHTML = "";
+  const items = [[0, "Картон"], [1, "Гофра"]];
+  for (const [v, label] of items) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.role = "radio";
+    b.textContent = label;
+    b.setAttribute("aria-checked", String(state.lhMat === v));
+    b.addEventListener("click", () => {
+      state.lhMat = v;
+      $("lhD").value = v ? 20 : 15;   // клапан склейки: 20 гофра / 15 картон
+      buildLhMatSwitch();
+      updateLhMatHint();
+      calc();
+    });
+    box.appendChild(b);
+  }
+  updateLhMatHint();
+}
+
+function updateLhMatHint() {
+  const el = $("lhMatHint");
+  if (!el) return;
+  el.textContent = state.lhMat
+    ? "гофра: допуск 1,5 мм, радиус дуг 1,5 мм, клапан склейки 20 мм"
+    : "картон: допуск 0,5 мм, радиус дуг 1 мм, клапан склейки 15 мм";
+}
+
+/* Кнопки-подсказки KD / KDR / HD_V / SKRUGDK. */
+function buildLhChips() {
+  const plan = [
+    ["lhKD", "lhKDChips", [["KD_B2", "B/2"], ["KD_B3", "B/3"]]],
+    ["lhKDR", "lhKDRChips", [["KDR_AVG", "Среднее"], ["KDR_MAX", "Максимум"]]],
+    ["lhHDV", "lhHDVChips", [["HD_AVG", "Среднее"], ["HD_MAX", "Максимальное"], ["HD_OPT", "Оптимальное"], ["HD_STR", "Усиленное"]]],
+    ["lhSKR", "lhSKRChips", [["SKR0", "Без скругления"], ["SKRMAX", "Максимум"]]],
+  ];
+  for (const [inputId, boxId, presets] of plan) {
+    const box = $(boxId);
+    if (!box) continue;
+    box.innerHTML = "";
+    for (const [expr, label] of presets) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "chip";
+      b.textContent = label;
+      b.title = `${expr} — подставить в поле`;
+      b.addEventListener("click", () => {
+        const vals = modelVars(MODEL_PACHKA_LH, readParams(), [expr]);
+        const v = vals[expr];
+        if (!Number.isFinite(v)) return;
+        $(inputId).value = fmt2(v);
+        calc();
+      });
+      box.appendChild(b);
+    }
+  }
+}
+
 /* Тип А / Тип Б для пачки. */
 function buildPachkaTypeSwitch() {
   const box = $("pachkaTypeSwitch");
@@ -3177,6 +3766,24 @@ function readParams() {
       TYPD: dno ? 1 : 0, TYPK: dno ? 0 : 1,
     };
   }
+  if (state.typeId === "pachkaLH") {
+    return {
+      A: num("lhA"),
+      D: num("lhD"),
+      B: num("lhB"),
+      E: num("lhE"),
+      H: num("lhH"),
+      KL: num("lhKL"),
+      Z: num("lhZ"),
+      ZF: num("lhZF"),
+      KD: num("lhKD"),
+      KDR: num("lhKDR"),
+      HD_V: num("lhHDV"),
+      SKRUGDK: num("lhSKR"),
+      TAIL_D: state.lhTail,
+      MAT: state.lhMat,
+    };
+  }
   if (state.typeId === "pachka") {
     return {
       A: num("pA"),
@@ -3276,6 +3883,7 @@ function modelVars(model, params, names) {
 
 function calc() {
   clampAll();
+  if (state.typeId === "pachkaLH") lhAutoTail();
   if (state.typeId === "krysha") applyKryshaLimits();
   if (state.typeId === "penal") applyPenalLimits();                       // значения ниже минимума подтягиваем к минимуму
   const type = currentType();
@@ -3287,7 +3895,7 @@ function calc() {
 
   // Ноль — законное значение для перечислений и для KL / Zp (отступ и усиление
   // замков бывают нулевыми). Остальные размеры должны быть больше нуля.
-  const ZERO_OK = new Set(["MODE", "PARTS", "FRAME", "MAT", "HD_V", "HD_N", "KL", "Zp", "TYPD", "TYPK",
+  const ZERO_OK = new Set(["MODE", "PARTS", "FRAME", "MAT", "HD_V", "HD_N", "KL", "Zp", "TYPD", "TYPK", "TAIL_D", "SKRUGDK", "KDR",
                          "SHUB", "LENTA", "LENTA_MID", "TYPBIGPERF", "HOLES", "EXTRA_HOLE"]);   // флаги пенала: ноль — законное значение
   const bad = Object.entries(params)
     .filter(([k, v]) => {
@@ -3341,6 +3949,11 @@ function fileName(p) {
     if (state.pnKind === "obech") return `obech_${p.A}x${p.B}x${p.H}${p.SHUB ? "_shub" : ""}${p.HOLES ? `_rot${p.ROT}` : ""}${p.EXTRA_HOLE ? "_extra" : ""}.svg`;
     const l = p.LENTA ? `_lenta${p.WLENTA}${p.LENTA_MID ? "_mid" : "_low"}` : "";
     return `penal_${p.A}x${p.B}x${p.H}${l}.svg`;
+  }
+  if (state.typeId === "pachkaLH") {
+    const mat = p.MAT ? "gofra" : "karton";
+    const tail = p.TAIL_D ? "_2hv" : "_1hv";
+    return `pachka_lh_${p.A}x${p.B}x${p.H}_${mat}${tail}.svg`;
   }
   if (state.typeId === "pachka") {
     const mat = p.MAT ? "gofra" : "karton";
@@ -3676,6 +4289,7 @@ function renderMetricsPenal(d) {
 function renderMetrics(d, p) {
   if (state.typeId === "krysha") return renderMetricsKrysha(d);
   if (state.typeId === "penal") return renderMetricsPenal(d);
+  // Пачка-ЛХ и Пачка-пачка считаются одинаково (биговки, резы, площадь)
   const creaseLen = d.total("crease");
   const creaseCount = d.count("crease");
 
@@ -3820,6 +4434,9 @@ buildModeSelect();
 buildPachkaTypeSwitch();
 buildMatSwitch();
 buildHdPresets();
+buildLhMatSwitch();
+buildLhTailSwitch();
+buildLhChips();
 syncTypeFields();
 
 $("dlSvg").addEventListener("click", download);
@@ -3859,6 +4476,8 @@ const LIMITS = {
   pZ: 3,     // длина замка
   pZF: 3,    // глубина замка
   pKL: 0,    // отступ клапана — ноль допустим
+  lhA: 20, lhB: 20, lhH: 20, lhE: 1, lhD: 1,
+  lhKL: 0, lhZ: 0, lhZF: 0, lhKD: 1, lhKDR: 0, lhHDV: 1, lhSKR: 0,
   pnA: 30,   // пенал: длина, минимум
   pnB: 20,   // пенал: ширина, минимум
   pnH: 12,   // пенал: высота дна, минимум
@@ -3892,6 +4511,8 @@ function clampAll() {
 const ALL_INPUTS = ["kA", "kB", "kHD", "kHK", "kED", "kEK", "kRD", "kRK",
                     "A", "B", "H", "U", "pA", "pB", "pH", "pE", "pD",
                     "pZ", "pZp", "pKL", "pZF", "pHDV", "pHDN",
+                    "lhA", "lhD", "lhB", "lhE", "lhH", "lhKL", "lhZ", "lhZF",
+                    "lhKD", "lhKDR", "lhHDV", "lhSKR",
                     "pnA", "pnB", "pnH", "pnE", "pnWLenta", "pnRot"];
 
 /* Пустое поле в видимом блоке — не считаем, оставляем прошлый чертёж. */
