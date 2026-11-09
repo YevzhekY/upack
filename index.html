@@ -152,6 +152,8 @@ input[type="number"]:focus, select:focus {
 input[type="number"]:disabled { background: var(--bg); color: var(--ink-3); }
 
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+/* тонкая серая полоска между группами полей */
+.sep { height: 1px; background: var(--line); border: 0; margin: 0 0 16px; }
 .hint { margin: 5px 0 0; font-size: 12px; color: var(--ink-3); }
 
 /* пресеты под полем: справочные, нажатие подставляет число */
@@ -561,6 +563,8 @@ input[type="number"]:disabled { background: var(--bg); color: var(--ink-3); }
         <p class="hint" id="lhMatHint"></p>
       </div>
 
+      <div class="sep"></div>
+
       <div class="grid2">
         <div class="field">
           <label class="lbl" for="lhA">Длина <span class="unit">A, мм</span></label>
@@ -589,21 +593,33 @@ input[type="number"]:disabled { background: var(--bg); color: var(--ink-3); }
           <input id="lhH" type="number" inputmode="decimal" min="20" step="1" value="200">
         </div>
         <div class="field">
-          <label class="lbl" for="lhKL">Отступ клапана <span class="unit">KL, мм</span></label>
-          <input id="lhKL" type="number" inputmode="decimal" min="0" step="1" value="5">
+          <label class="lbl" for="lhZ">Длина замка <span class="unit">Z, мм</span></label>
+          <input id="lhZ" type="number" inputmode="decimal" min="0" step="1" value="10">
+        </div>
+      </div>
+
+      <div class="sep"></div>
+
+      <div class="grid2">
+        <div class="field">
+          <label class="lbl" for="lhHDV">Клапан верх <span class="unit">HD_V, мм</span></label>
+          <input id="lhHDV" type="number" inputmode="decimal" min="1" step="0.5" value="49">
+          <div class="chips" id="lhHDVChips"></div>
         </div>
       </div>
 
       <div class="grid2">
         <div class="field">
-          <label class="lbl" for="lhZ">Длина замка <span class="unit">Z, мм</span></label>
-          <input id="lhZ" type="number" inputmode="decimal" min="0" step="1" value="10">
+          <label class="lbl" for="lhKL">Отступ клапана <span class="unit">KL, мм</span></label>
+          <input id="lhKL" type="number" inputmode="decimal" min="0" step="1" value="5">
         </div>
         <div class="field">
           <label class="lbl" for="lhZF">Глубина замка <span class="unit">ZF, мм</span></label>
           <input id="lhZF" type="number" inputmode="decimal" min="0" step="1" value="5">
         </div>
       </div>
+
+      <div class="sep"></div>
 
       <div class="grid2">
         <div class="field">
@@ -620,27 +636,21 @@ input[type="number"]:disabled { background: var(--bg); color: var(--ink-3); }
 
       <div class="grid2">
         <div class="field">
-          <label class="lbl" for="lhHDV">Клапан верх <span class="unit">HD_V, мм</span></label>
-          <input id="lhHDV" type="number" inputmode="decimal" min="1" step="0.5" value="49">
-          <div class="chips" id="lhHDVChips"></div>
-        </div>
-        <div class="field">
           <label class="lbl" for="lhSKR">Скругление хвоста <span class="unit">SKRUGDK, мм</span></label>
           <input id="lhSKR" type="number" inputmode="decimal" min="0" step="1" value="2">
           <div class="chips" id="lhSKRChips"></div>
         </div>
-      </div>
-
-      <div class="field">
-        <label class="lbl">Хвост</label>
-        <div class="segmented row" id="lhTailSwitch" role="radiogroup"></div>
-        <p class="hint" id="lhTailHint"></p>
+        <div class="field">
+          <label class="lbl">Хвост</label>
+          <div class="segmented row" id="lhTailSwitch" role="radiogroup"></div>
+          <p class="hint" id="lhTailHint"></p>
+        </div>
       </div>
 
     </div>
 
 
-    <!-- ================= КРЫШКА-ДНО ================= -->
+<!-- ================= КРЫШКА-ДНО ================= -->
     <div id="kryshaFields" hidden>
 
       <div class="field">
@@ -3035,8 +3045,9 @@ Y4 = Y3-t                              # нижняя биговка крышк�
 Y5 = Y4+E
 Y6 = Y1+HD_VF                      # подрезано пределом A-3
 
-Y11=Y0-ROUND(B/2)
-Y12=Y0-ROUND(B*0.75)
+# вниз до 0,5: FLOOR(x*2)/2 — FLOOR в движке принимает один аргумент
+Y11=Y0-FLOOR(B/2*2)/2
+Y12=Y0-FLOOR(B*0.75*2)/2
 Y860=Y0-KD-(0.25+0.25*MAT)
 Y840=Y860-KDR
 
