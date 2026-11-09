@@ -647,6 +647,41 @@ input[type="number"]:disabled { background: var(--bg); color: var(--ink-3); }
         </div>
       </div>
 
+      <div class="sep"></div>
+
+      <div class="grid2">
+        <div class="field">
+          <label class="lbl">Замок закрытия</label>
+          <div class="segmented row" id="lhLockSwitch" role="radiogroup"></div>
+        </div>
+        <div class="field" id="lhLockDouField" hidden>
+          <label class="lbl">Язычки</label>
+          <div class="segmented row" id="lhLockDouSwitch" role="radiogroup"></div>
+        </div>
+      </div>
+
+      <div id="lhLockFields" hidden>
+
+        <div class="grid2">
+          <div class="field">
+            <label class="lbl" for="lhWL">Ширина язычка <span class="unit">WL, мм</span></label>
+            <input id="lhWL" type="number" inputmode="decimal" min="16" step="1" value="40">
+          </div>
+          <div class="field">
+            <label class="lbl" for="lhZL">Замок язычка <span class="unit">ZL, мм</span></label>
+            <input id="lhZL" type="number" inputmode="decimal" min="3" step="1" value="5">
+          </div>
+        </div>
+
+        <div class="grid2">
+          <div class="field">
+            <label class="lbl" for="lhRWZ">Отверстие под палец <span class="unit">RWZ, мм</span></label>
+            <input id="lhRWZ" type="number" inputmode="decimal" min="8" step="1" value="16">
+          </div>
+        </div>
+
+      </div>
+
     </div>
 
 
@@ -2845,6 +2880,10 @@ const MODEL_PACHKA_LH = `
 #    автоматически, построение не останавливается.
 #      CUT_V / CUT_N  — на сколько подрезано (0, если в пределах)
 #    MAT  материал              0 картон / 1 гофра
+#    LOCK замок закрытия         1 — язычок и замок включены, 0 — выключены
+#         при LOCK=0 поля WL и ZL на странице скрыты, геометрия не меняется
+#    WL   ширина язычка          размер язычка замка закрытия
+#    ZL   замок язычка           размер замка язычка
 #
 #  ОТ МАТЕРИАЛА ЗАВИСИТ
 #    t      допуск              0,5 / 1,5
@@ -2918,6 +2957,11 @@ KDR     = ?      # =KDR_AVG ; Среднее @KDR_AVG ; Максимальное
 SKRUGDK = ?     # =2 ; радиус скругления хвоста; 0 — не скруглять; макс min(KD/2, треть свободной ширины) ; Без скругления @SKR0 ; Максимум @SKRMAX
 TAIL_D = ?      # =0 ; хвост: 0 — одинарный, 1 — двойной
 MAT  = ?       # =0 ; картон @MAT=0 & D=D0 ; гофра @MAT=1 & D=D1
+LOCK = ?       # =0 ; замок закрытия: 1 — включён, 0 — выключен
+LOCKDOU = ?    # =0 ; язычки: 0 — один, 1 — два
+WL   = ?       # =40 ; ширина язычка
+ZL   = ?       # =5 ; замок язычка
+RWZ   = ?       # =16 ; отверстие под палец
 
 # --- от материала ---
 t    = 0.5+MAT*1.0
@@ -3016,6 +3060,42 @@ X577=X573+ROUND((X62-X60)/2)
 X860=X1-ROUND(B/2)-(0.25+0.25*MAT)
 X861=X2+ROUND(B/2)+(0.25+0.25*MAT)
 
+
+# Замок
+X2265 = X1+FLOOR((X2-X1-WL)/3)
+X421 = X65*LOCK*(1-LOCKDOU)+X2265*LOCKDOU-WL/2
+X422 = X65*LOCK*(1-LOCKDOU)+X2265*LOCKDOU+WL/2
+X423 = X421+ZL-1
+X424 = X422-ZL+1
+X425 = X423+2.598076
+X426 = X424-2.598076
+
+X2266 = X2-FLOOR((X2-X1-WL)/3)
+X2421 = X2266-WL/2
+X2422 = X2266+WL/2
+X2423 = X2421+ZL-1
+X2424 = X2422-ZL+1
+X2425 = X2423+2.598076
+X2426 = X2424-2.598076
+
+
+X2577 = X3+FLOOR((X4-X3-WL)/3)
+X431 = X577*LOCK*(1-LOCKDOU)+X2577*LOCKDOU-WL/2
+X432 = X577*LOCK*(1-LOCKDOU)+X2577*LOCKDOU+WL/2
+X433 = X431+ZL
+X434 = X432-ZL
+X435 = X431-1
+X436 = X432+1
+
+X2578 = X4-FLOOR((X4-X3-WL)/3)
+X2431 = X2578-WL/2
+X2432 = X2578+WL/2
+X2433 = X2431+ZL
+X2434 = X2432-ZL
+X2435 = X2431-1
+X2436 = X2432+1
+
+
 # границы линий хвоста с учётом допуска — чтобы не повторять формулу
 XS1 = X573+(0.25+0.25*MAT)
 XS2 = X575-(0.25+0.25*MAT)
@@ -3051,6 +3131,63 @@ Y12=Y0-FLOOR(B*0.75*2)/2
 Y860=Y0-KD-(0.25+0.25*MAT)
 Y840=Y860-KDR
 
+# Замок
+Y420=Y3+1.5*(1-MAT)+0.5*MAT
+Y421=Y3-3
+Y422=Y1-13*(1-MAT)-21.5*MAT
+Y433=Y1+13*(1-MAT)+18.5*MAT
+Y434=Y1+4
+Y435=Y1-0.5
+
+
+# --- скругление R8 в углах L608-L610 и L609-L610 ---
+# вершина P1 = (X432,Y433): угол между L610 (влево) и L608 (к X436,Y434)
+RF    = 8
+FA1   = ATAN2(Y434-Y433, X436-X432)
+OA1   = 180
+FTH1  = MIN(ABS(FA1-OA1), 360-ABS(FA1-OA1))
+FD1   = RF*COS(FTH1/2)/SIN(FTH1/2)
+FT1A_X = X432+FD1*COS(FA1)
+FT1A_Y = Y433+FD1*SIN(FA1)
+FT1B_X = X432+FD1*COS(OA1)
+FT1B_Y = Y433+FD1*SIN(OA1)
+FU1AX = COS(FA1)
+FU1AY = SIN(FA1)
+FU1BX = COS(OA1)
+FU1BY = SIN(OA1)
+FBI1X = FU1AX+FU1BX
+FBI1Y = FU1AY+FU1BY
+FBL1  = SQRT(FBI1X*FBI1X+FBI1Y*FBI1Y)
+FC1_X = X432+FBI1X/FBL1*RF/SIN(FTH1/2)
+FC1_Y = Y433+FBI1Y/FBL1*RF/SIN(FTH1/2)
+FGC1A = ATAN2(FT1A_Y-FC1_Y, FT1A_X-FC1_X)
+FGC1B = ATAN2(FT1B_Y-FC1_Y, FT1B_X-FC1_X)
+FS1   = MIN(FGC1A, FGC1B)
+FE1   = MAX(FGC1A, FGC1B)
+
+# вершина P2 = (X431,Y433): угол между L610 (вправо) и L609 (к X435,Y434)
+FA2   = ATAN2(Y434-Y433, X435-X431)
+OA2   = 0
+FTH2  = MIN(ABS(FA2-OA2), 360-ABS(FA2-OA2))
+FD2   = RF*COS(FTH2/2)/SIN(FTH2/2)
+FT2A_X = X431+FD2*COS(FA2)
+FT2A_Y = Y433+FD2*SIN(FA2)
+FT2B_X = X431+FD2*COS(OA2)
+FT2B_Y = Y433+FD2*SIN(OA2)
+FU2AX = COS(FA2)
+FU2AY = SIN(FA2)
+FU2BX = COS(OA2)
+FU2BY = SIN(OA2)
+FBI2X = FU2AX+FU2BX
+FBI2Y = FU2AY+FU2BY
+FBL2  = SQRT(FBI2X*FBI2X+FBI2Y*FBI2Y)
+FC2_X = X431+FBI2X/FBL2*RF/SIN(FTH2/2)
+FC2_Y = Y433+FBI2Y/FBL2*RF/SIN(FTH2/2)
+FGC2A = ATAN2(FT2A_Y-FC2_Y, FT2A_X-FC2_X)
+FGC2B = ATAN2(FT2B_Y-FC2_Y, FT2B_X-FC2_X)
+FS2   = MIN(FGC2A, FGC2B)
+FE2   = MAX(FGC2A, FGC2B)
+
 [ЛИНИИ]
 # --- ёжик на клапане склейки ---
 L0  | ежик| X6 | 6 | X6 | Y1-6
@@ -3058,7 +3195,10 @@ L0  | ежик| X6 | 6 | X6 | Y1-6
 L1  | рез| X0 | Y1 | X0 | Y1+Z
 L2  | рез| X13 | Y1 | X13 | Y1+Z
 L3  | рез| X4 | Y0 | X5 | 5
-L6  | рез| X13 | Y1 | X4 | Y1
+L600  | рез| X13 | Y1 | X577*(1-LOCK)+X433*LOCK*(1-MAT)+X435*LOCK*MAT | Y1
+L601  | рез| X577*(1-LOCK)+X434*LOCK*(1-MAT)+X436*LOCK*MAT | Y1 | X4*(1-LOCKDOU*LOCK)+X2433*(LOCKDOU*LOCK)*(1-MAT)+X2435*(LOCKDOU*LOCK)*MAT | Y1
+L599 | рез| X4 | Y1 | X2434*(LOCKDOU*LOCK)*(1-MAT)+X2436*(LOCKDOU*LOCK)*MAT| Y1 | LOCK*LOCKDOU
+
 L37 | рез| X0 | Y1+Z | X0+ZF*COS(45) | Y1+Z+ZF*SIN(45)
 L38 | рез| X0+ZF*COS(45) | Y1+Z+ZF*SIN(45) | X0+KLR | Y6
 L39 | рез| X13 | Y1+Z | X13-ZF*COS(45) | Y1+Z+ZF*SIN(45)
@@ -3081,7 +3221,11 @@ L32 | биговка | X1 | Y2 | X1 | YB+(1+(0.5*MAT))
 L33 | биговка | X2 | YB+(1+(0.5*MAT)) | X2 | Y2
 L34 | биговка | X4 | Y1 | X4 | YB
 L36 | биговка | X1 | Y2 | X2 | Y2
-L45 | биговка | X1+Z+3 | Y4 | X2-Z-3 | Y4
+
+L450 | биговка | X1+Z+3 | Y4 | X65*(1-LOCK)+X421*LOCK | Y4
+L451 | биговка | X65*(1-LOCK)+X422*LOCK | Y4 | (X2-Z-3)*(1-LOCKDOU*LOCK)+X2421*(LOCKDOU*LOCK)| Y4
+L452 | биговка | X2422 | Y4 | X2-Z-3| Y4 | LOCK*LOCKDOU
+
 L47 | биговка | X3 | Y1 | X3 | YB+(1+(0.5*MAT))
 L50 | рез | CXR-DXR | Y5 | X8-(ROUND((X29*X29+(Y5-Y3)*(Y5-Y3)-X7*X7)/(2*(X29-X7))-X7))+DXR | Y5
 
@@ -3144,9 +3288,81 @@ L236 | биговка | X1+(1+(0.5*MAT)) | Y0 | X2-(1+(0.5*MAT)) | Y0
 L237 | биговка | XB2 | Y0 | X3-(1+(0.5*MAT)) | Y0
 L238 | биговка | XB3 | Y0 | X4 | Y0
 
+# --- замое картон ---
+L239 | рез | X421 | Y421 | X421 | Y3 | LOCK*(1-MAT)
+L240 | рез | X421 | Y3 | X423 | Y3 | LOCK*(1-MAT)
+L241 | рез | X423 | Y3 | X425 | Y420 | LOCK*(1-MAT)
+L242 | рез | X425 | Y420 | X426 | Y420 | LOCK*(1-MAT)
+L243 | рез | X426 | Y420 | X424 | Y3 | LOCK*(1-MAT)
+L244 | рез | X424 | Y3 | X422 | Y3 | LOCK*(1-MAT)
+L245 | рез | X422 | Y3 | X422 | Y421 | LOCK*(1-MAT)
+L602 | рез | X433 | Y1 | X433 | Y1-3| LOCK*(1-MAT)
+L603 | рез | X434 | Y1 | X434 | Y1-3| LOCK*(1-MAT)
+L604 | рез | X431 | Y422 | X431 | Y1| LOCK*(1-MAT)
+L605 | рез | X431 | Y1 | X435 | Y434| LOCK*(1-MAT)
+L606 | рез | X432 | Y422 | X432 | Y1| LOCK*(1-MAT)
+L607 | рез | X432 | Y1 | X436 | Y434| LOCK*(1-MAT)
+L608 | рез | FT1A_X | FT1A_Y | X436 | Y434| LOCK*(1-MAT)
+L609 | рез | FT2A_X | FT2A_Y | X435 | Y434| LOCK*(1-MAT)
+L610 | рез | FT1B_X | FT1B_Y | FT2B_X | FT2B_Y| LOCK*(1-MAT)
+L611 | биговка | X432 | Y422 | X431 | Y422| LOCK*(1-MAT)
+L612 | биговка | X434 | Y435 | X433 | Y435| LOCK*(1-MAT)
+
+L8239 | рез | X2421 | Y421 | X2421 | Y3 | LOCK*(1-MAT)*LOCKDOU
+L8240 | рез | X2421 | Y3 | X2423 | Y3 | LOCK*(1-MAT)*LOCKDOU
+L8241 | рез | X2423 | Y3 | X2425 | Y420 | LOCK*(1-MAT)*LOCKDOU
+L8242 | рез | X2425 | Y420 | X2426 | Y420 | LOCK*(1-MAT)*LOCKDOU
+L8243 | рез | X2426 | Y420 | X2424 | Y3 | LOCK*(1-MAT)*LOCKDOU
+L8244 | рез | X2424 | Y3 | X2422 | Y3 | LOCK*(1-MAT)*LOCKDOU
+L8245 | рез | X2422 | Y3 | X2422 | Y421 | LOCK*(1-MAT)*LOCKDOU
+L8602 | рез | X2433 | Y1 | X2433 | Y1-3| LOCK*(1-MAT)*LOCKDOU
+L8603 | рез | X2434 | Y1 | X2434 | Y1-3| LOCK*(1-MAT)*LOCKDOU
+L8604 | рез | X2431 | Y422 | X2431 | Y1| LOCK*(1-MAT)*LOCKDOU
+L8605 | рез | X2431 | Y1 | X2435 | Y434| LOCK*(1-MAT)*LOCKDOU
+L8606 | рез | X2432 | Y422 | X2432 | Y1| LOCK*(1-MAT)*LOCKDOU
+L8607 | рез | X2432 | Y1 | X2436 | Y434| LOCK*(1-MAT)*LOCKDOU
+L8608 | рез | FT1A_X+X2432-x432 | FT1A_Y | X2436 | Y434| LOCK*(1-MAT)*LOCKDOU
+L8609 | рез | FT2A_X+X2432-x432 | FT2A_Y | X2435 | Y434| LOCK*(1-MAT)*LOCKDOU
+L8610 | рез | FT1B_X+X2432-x432 | FT1B_Y | FT2B_X+X2432-x432 | FT2B_Y| LOCK*(1-MAT)*LOCKDOU
+L8611 | биговка | X2432 | Y422 | X2431 | Y422| LOCK*(1-MAT)*LOCKDOU
+L8612 | биговка | X2434 | Y435 | X2433 | Y435| LOCK*(1-MAT)*LOCKDOU
+
+# --- замок гофра---
+L613 | РЕЗ| X421 | Y420 | X421 | Y420-5 | LOCK*MAT
+L614 | РЕЗ| X421 | Y420 | X422 | Y420 | LOCK*MAT
+L615 | РЕЗ| X422 | Y420 | X422 | Y420-5 | LOCK*MAT
+L616 | РЕЗ| X435 | Y422 | X435 | Y433-10 | LOCK*MAT
+L617 | рез | X436 | Y422 | X436 | Y433-10 | LOCK*MAT
+L618 | рез | X436-10 | Y433 | X435+10 | Y433 | LOCK*MAT
+L619 | биговка | X435 | Y422 | X436 | Y422| LOCK*MAT
+L620 | биговка | X435 | Y1-1.5 | X436 | Y1-1.5| LOCK*MAT
+
+L7613 | РЕЗ| X2421 | Y420 | X2421 | Y420-5 | LOCK*MAT*LOCKDOU
+L7614 | РЕЗ| X2421 | Y420 | X2422 | Y420 | LOCK*MAT*LOCKDOU
+L7615 | РЕЗ| X2422 | Y420 | X2422 | Y420-5 | LOCK*MAT*LOCKDOU
+L7616 | РЕЗ| X2435 | Y422 | X2435 | Y433-10 | LOCK*MAT*LOCKDOU
+L7617 | рез | X2436 | Y422 | X2436 | Y433-10 | LOCK*MAT*LOCKDOU
+L7618 | рез | X2436-10 | Y433 | X2435+10 | Y433 | LOCK*MAT*LOCKDOU
+L7619 | биговка | X2435 | Y422 | X2436 | Y422| LOCK*MAT*LOCKDOU
+L7620 | биговка | X2435 | Y1-1.5 | X2436 | Y1-1.5| LOCK*MAT*LOCKDOU
+
 [ОКРУЖНОСТИ]
 R50 | рез | CXR | Y3 | ROUND((X29*X29+(Y5-Y3)*(Y5-Y3)-X7*X7)/(2*(X29-X7))-X7) | ATAN2(Y5-Y3, -DXR) | 180
 R51 | рез | X8-(ROUND((X29*X29+(Y5-Y3)*(Y5-Y3)-X7*X7)/(2*(X29-X7))-X7)) | Y3 | ROUND((X29*X29+(Y5-Y3)*(Y5-Y3)-X7*X7)/(2*(X29-X7))-X7) | 0 | 180-ATAN2(Y5-Y3, -DXR)
+
+R94| рез | X2266 | Y420 | RWZ/2 | 180 | 360 | LOCK*LOCKDOU
+R99| рез | X65*LOCK*(1-LOCKDOU)+X2265*LOCKDOU | Y420 | RWZ/2 | 180 | 360 | LOCK
+
+R120 | рез | FC1_X | FC1_Y | RF | FS1 | FE1 | LOCK*(1-MAT)
+R121 | рез | FC2_X | FC2_Y | RF | FS2 | FE2 | LOCK*(1-MAT)
+
+R2120 | рез | FC1_X+X2432-x432 | FC1_Y | RF | FS1 | FE1 | LOCK*(1-MAT)*LOCKDOU
+R2121 | рез | FC2_X+X2432-x432 | FC2_Y | RF | FS2 | FE2 | LOCK*(1-MAT)*LOCKDOU
+
+R98| рез | X435+10 | Y433-10 | 10 | 90 | 180 | LOCK*MAT
+R97| рез | X436-10 | Y433-10 | 10 | 0| 90| LOCK*MAT
+R96| рез | X2435+10 | Y433-10 | 10 | 90 | 180 | LOCK*MAT*LOCKDOU
+R95| рез | X2436-10 | Y433-10 | 10 | 0| 90| LOCK*MAT*LOCKDOU
 # --- соединение для картона ---
 # --- 1 ---
 R100 | рез | X1-1 | Y2 | 1 | TANANG(X1-1, Y2, 1, X23, Y1+3, 1) | 360 | MAT=0 
@@ -3187,7 +3403,6 @@ R119 | рез | XS4-SKRUG_V  | Y12+SKRUG_V  | SKRUG_V | 270 | 0   | SKRUG_V
 Ширина больше нуля     | A-1              | A должна быть больше 1 мм | 1
 Глубина больше допуска | B-t-1            | B должна быть больше допуска | 1
 # эти проверки смотрят на фактическую высоту, то есть уже подрезанную
-
 Верхний клапан не выше крышки | B+E-t-HD_VF | верхний пылевой клапан выше клапана крышки | 0
 
 # радиус скругления упирается в предел min(KD/2, треть свободной ширины) (мягкая проверка)
@@ -3216,7 +3431,7 @@ const HANDLE_MODES = [
    Модель берётся из models.js, движок — из engine.js.
    ============================================================ */
 
-const BUILD = "v22 · 05112026";   // подставляется сборщиком
+const BUILD = "v26 · 09112026";   // подставляется сборщиком
 
 /* ---------- авторство ------------------------------------------------------
    Made by Yauheni Padloukin @evgenpdl & Claude Haiku 5.5
@@ -3248,6 +3463,8 @@ const state = {
   lhMat: 0,               // Пачка-ЛХ: 0 картон / 1 гофра
   lhTail: 0,              // Пачка-ЛХ: TAIL_D, авто-правило по A и KD
   lhTailAutoSig: null,    // последняя пара A|KD, для которой правило уже сработало
+  lhLock: 0,              // Пачка-ЛХ: LOCK — замок закрытия
+  lhLockDou: 0,           // Пачка-ЛХ: LOCKDOU — 0 один язычок, 1 два
   mat: 0,                 // 0 картон / 1 гофра
   lastSvg: null,
   showDims: false,
@@ -3496,6 +3713,87 @@ function applyPenalLimits() {
 }
 
 /* ---------------------------------------------------------- Пачка-ЛХ */
+
+/* Замок закрытия: LOCK включает язычок, LOCKDOU выбирает один или два. */
+function buildLhLockSwitch() {
+  const box = $("lhLockSwitch");
+  if (!box) return;
+  box.innerHTML = "";
+  for (const [v, label] of [[0, "Нет"], [1, "Есть"]]) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.role = "radio";
+    b.textContent = label;
+    b.setAttribute("aria-checked", String(state.lhLock === v));
+    b.addEventListener("click", () => {
+      state.lhLock = v;
+      buildLhLockSwitch();
+      syncLhLockFields();
+      calc();
+    });
+    box.appendChild(b);
+  }
+}
+
+function buildLhLockDouSwitch() {
+  const box = $("lhLockDouSwitch");
+  if (!box) return;
+  box.innerHTML = "";
+  for (const [v, label] of [[0, "1"], [1, "2"]]) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.role = "radio";
+    b.textContent = label;
+    b.title = v ? "два язычка (LOCKDOU 1)" : "один язычок (LOCKDOU 0)";
+    b.setAttribute("aria-checked", String(state.lhLockDou === v));
+    b.addEventListener("click", () => {
+      state.lhLockDou = v;
+      buildLhLockDouSwitch();
+      calc();
+    });
+    box.appendChild(b);
+  }
+}
+
+/* Поля язычка видны только при включённом замке; выбор 1/2 — тоже. */
+function syncLhLockFields() {
+  const on = state.lhLock === 1;
+  const f = $("lhLockFields"), d = $("lhLockDouField");
+  if (f) f.hidden = !on;
+  if (d) d.hidden = !on;
+}
+
+/* Пределы язычка: WL → ZL → RWZ, каждый зависит от предыдущего. */
+function lhClampLockParams() {
+  const read = (id) => {
+    const raw = String($(id).value).replace(",", ".").trim();
+    const v = Number(raw);
+    return raw === "" || !Number.isFinite(v) ? null : v;
+  };
+  const put = (id, v) => { if (read(id) !== v) $(id).value = fmt2(v); };
+  const A = read("lhA"), Z = read("lhZ");
+  const WL = read("lhWL"), ZL = read("lhZL"), RWZ = read("lhRWZ");
+  let wl = WL, zl = ZL, rwz = RWZ;
+
+  if (wl !== null) {
+    let hi = (A !== null && Z !== null) ? A - (Z + 3) * 2 - 20 : Infinity;
+    if (hi < 16) hi = 16;
+    wl = Math.min(Math.max(wl, 16), hi);
+    put("lhWL", wl);
+  }
+  if (zl !== null && wl !== null) {
+    let hi = (wl - 10) / 2;
+    if (hi < 3) hi = 3;
+    zl = Math.min(Math.max(zl, 3), hi);
+    put("lhZL", zl);
+  }
+  if (rwz !== null) {
+    /* верхний предел WL-(ZL+8)*2 — подсказка, не запрет:
+       при WL=40, ZL=5 он даёт 14, а базовое значение 16 */
+    rwz = Math.max(rwz, 8);
+    put("lhRWZ", rwz);
+  }
+}
 
 /* Авто-правило двойного хвоста: (A-2*KD)/3 >= KD.
    Срабатывает только при смене A или KD, поэтому ручное переключение
@@ -3793,6 +4091,11 @@ function readParams() {
       SKRUGDK: num("lhSKR"),
       TAIL_D: state.lhTail,
       MAT: state.lhMat,
+      LOCK: state.lhLock,
+      LOCKDOU: state.lhLockDou,
+      WL: num("lhWL"),
+      ZL: num("lhZL"),
+      RWZ: num("lhRWZ"),
     };
   }
   if (state.typeId === "pachka") {
@@ -3894,7 +4197,7 @@ function modelVars(model, params, names) {
 
 function calc() {
   clampAll();
-  if (state.typeId === "pachkaLH") lhAutoTail();
+  if (state.typeId === "pachkaLH") { lhClampLockParams(); lhAutoTail(); }
   if (state.typeId === "krysha") applyKryshaLimits();
   if (state.typeId === "penal") applyPenalLimits();                       // значения ниже минимума подтягиваем к минимуму
   const type = currentType();
@@ -3906,7 +4209,7 @@ function calc() {
 
   // Ноль — законное значение для перечислений и для KL / Zp (отступ и усиление
   // замков бывают нулевыми). Остальные размеры должны быть больше нуля.
-  const ZERO_OK = new Set(["MODE", "PARTS", "FRAME", "MAT", "HD_V", "HD_N", "KL", "Zp", "TYPD", "TYPK", "TAIL_D", "SKRUGDK", "KDR",
+  const ZERO_OK = new Set(["MODE", "PARTS", "FRAME", "MAT", "HD_V", "HD_N", "KL", "Zp", "TYPD", "TYPK", "TAIL_D", "SKRUGDK", "KDR", "LOCK", "LOCKDOU",
                          "SHUB", "LENTA", "LENTA_MID", "TYPBIGPERF", "HOLES", "EXTRA_HOLE"]);   // флаги пенала: ноль — законное значение
   const bad = Object.entries(params)
     .filter(([k, v]) => {
@@ -4447,6 +4750,9 @@ buildMatSwitch();
 buildHdPresets();
 buildLhMatSwitch();
 buildLhTailSwitch();
+buildLhLockSwitch();
+buildLhLockDouSwitch();
+syncLhLockFields();
 buildLhChips();
 syncTypeFields();
 
@@ -4487,7 +4793,7 @@ const LIMITS = {
   pZ: 3,     // длина замка
   pZF: 3,    // глубина замка
   pKL: 0,    // отступ клапана — ноль допустим
-  lhA: 20, lhB: 20, lhH: 20, lhE: 1, lhD: 1,
+  lhA: 20, lhB: 20, lhH: 20, lhE: 1, lhD: 1, lhWL: 16, lhZL: 3, lhRWZ: 8,
   lhKL: 0, lhZ: 0, lhZF: 0, lhKD: 1, lhKDR: 0, lhHDV: 1, lhSKR: 0,
   pnA: 30,   // пенал: длина, минимум
   pnB: 20,   // пенал: ширина, минимум
@@ -4523,7 +4829,7 @@ const ALL_INPUTS = ["kA", "kB", "kHD", "kHK", "kED", "kEK", "kRD", "kRK",
                     "A", "B", "H", "U", "pA", "pB", "pH", "pE", "pD",
                     "pZ", "pZp", "pKL", "pZF", "pHDV", "pHDN",
                     "lhA", "lhD", "lhB", "lhE", "lhH", "lhKL", "lhZ", "lhZF",
-                    "lhKD", "lhKDR", "lhHDV", "lhSKR",
+                    "lhKD", "lhKDR", "lhHDV", "lhSKR", "lhWL", "lhZL", "lhRWZ",
                     "pnA", "pnB", "pnH", "pnE", "pnWLenta", "pnRot"];
 
 /* Пустое поле в видимом блоке — не считаем, оставляем прошлый чертёж. */
