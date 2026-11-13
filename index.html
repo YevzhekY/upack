@@ -824,6 +824,8 @@ input[type="number"]:disabled { background: var(--bg); color: var(--ink-3); }
         <h2>Показатели</h2>
         <div class="dl-group">
           <button class="btn ghost sm" id="dlSvg">Скачать SVG</button>
+          <button class="btn ghost sm" id="dlPdf">Скачать PDF</button>
+          <button class="btn ghost sm" id="dlEps">Скачать EPS</button>
           <button class="btn ghost sm" id="dlDxf">Скачать DXF</button>
         </div>
       </div>
@@ -3431,7 +3433,7 @@ const HANDLE_MODES = [
    Модель берётся из models.js, движок — из engine.js.
    ============================================================ */
 
-const BUILD = "v28 · 09112026";   // подставляется сборщиком
+const BUILD = "v31 · 09112026";   // подставляется сборщиком
 
 /* ---------- авторство ------------------------------------------------------
    Made by Yauheni Padloukin @evgenpdl & Claude Haiku 5.5
@@ -4278,7 +4280,7 @@ function fileName(p) {
   const u = (p.MODE === 2 || p.MODE === 3) ? `_U${p.U}` : "";
   const pt = p.PARTS === 2 ? "_2ch" : "";
   const fr = p.FRAME ? "_ramka" : "";
-  return `paket_${p.A}x${p.B}x${p.H}_${modeName}${u}${pt}${fr}.svg`;
+  return `paket_${p.A}x${p.H}x${p.B}_${modeName}${u}${pt}${fr}.svg`;
 }
 
 /* ---------------------------------------------------------- отрисовка */
@@ -4712,6 +4714,214 @@ function downloadDxf() {
   setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
+/* --------------------------------------------------- PDF
+   Формируется без внешних библиотек: страница в мм, векторные линии и дуги.
+   1 мм = 72/25.4 pt. Система координат модели уже «y вверх», как в PDF. */
+const PDF_MM = 72 / 25.4;
+
+function pdfColor(hex) {
+  const h = String(hex || "#000000").replace("#", "");
+  const v = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+  const n = parseInt(v.slice(0, 6) || "000000", 16);
+  return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255]
+    .map((x) => (Math.round(x * 1000) / 1000).toFixed(3));
+}
+
+/* Дуга в кубические Безье: разбиваем на куски не больше 90°, чтобы погрешность была ничтожной. */
+function arcBeziers(cx, cy, r, a0, a1) {
+  let sweep = a1 - a0;
+  while (sweep <= -360) sweep += 360;
+  while (sweep > 360) sweep -= 360;
+  const n = Math.max(1, Math.ceil(Math.abs(sweep) / 90));
+  const step = sweep / n;
+  const k = (4 / 3) * Math.tan((Math.abs(step) * Math.PI) / 180 / 4);
+  const out = [];
+  let ang = a0;
+  for (let i = 0; i < n; i++) {
+    const a = (ang * Math.PI) / 180;
+    const b = ((ang + step) * Math.PI) / 180;
+    const x0 = cx + r * Math.cos(a), y0 = cy + r * Math.sin(a);
+    const x1 = cx + r * Math.cos(b), y1 = cy + r * Math.sin(b);
+    const t1x = x0 - r * Math.sin(a) * k * Math.sign(step || 1);
+    const t1y = y0 + r * Math.cos(a) * k * Math.sign(step || 1);
+    const t2x = x1 + r * Math.sin(b) * k * Math.sign(step || 1);
+    const t2y = y1 - r * Math.cos(b) * k * Math.sign(step || 1);
+    out.push({ x0, y0, c1: [t1x, t1y], c2: [t2x, t2y], x1, y1 });
+    ang += step;
+  }
+  return out;
+}
+
+function buildPdf(drawing, margin) {
+  const [x0, y0, , y1] = drawing.bbox;
+  const W = drawing.w + margin * 2;
+  const H = drawing.h + margin * 2;
+  const px = (p) => (p[0] - x0 + margin) * PDF_MM;
+  const py = (p) => (p[1] - y0 + margin) * PDF_MM;
+
+  const layers = ["perf", "perfo", "crease", "cut"];
+  const ops = [];
+  for (const typ of layers) {
+    const st = drawing.style[typ];
+    if (!st) continue;
+    const parts = [];
+    for (const sg of drawing.segments) {
+      if (sg.type !== typ) continue;
+      if (sg.kind === "line") {
+        const dx = Math.abs(sg.b[0] - sg.a[0]), dy = Math.abs(sg.b[1] - sg.a[1]);
+        if (dx < 1e-9 && dy < 1e-9) continue;
+        parts.push(`${px(sg.a).toFixed(3)} ${py(sg.a).toFixed(3)} m ${px(sg.b).toFixed(3)} ${py(sg.b).toFixed(3)} l`);
+      } else if (sg.full) {
+        const cx = px(sg.c), cy = py(sg.c), r = sg.r * PDF_MM;
+        const segs = arcBeziers(cx, cy, r, 0, 360);
+        parts.push(segs.map((bz, i) => `${i === 0 ? `${bz.x0.toFixed(3)} ${bz.y0.toFixed(3)} m` : ""} `
+          + `${bz.c1[0].toFixed(3)} ${bz.c1[1].toFixed(3)} ${bz.c2[0].toFixed(3)} ${bz.c2[1].toFixed(3)} `
+          + `${bz.x1.toFixed(3)} ${bz.y1.toFixed(3)} c`).join(" "));
+      } else {
+        const cx = px(sg.c), cy = py(sg.c), r = sg.r * PDF_MM;
+        const segs = arcBeziers(cx, cy, r, sg.start, sg.start + sg.span);
+        parts.push(segs.map((bz, i) => `${i === 0 ? `${bz.x0.toFixed(3)} ${bz.y0.toFixed(3)} m` : ""} `
+          + `${bz.c1[0].toFixed(3)} ${bz.c1[1].toFixed(3)} ${bz.c2[0].toFixed(3)} ${bz.c2[1].toFixed(3)} `
+          + `${bz.x1.toFixed(3)} ${bz.y1.toFixed(3)} c`).join(" "));
+      }
+    }
+    if (!parts.length) continue;
+    const [red, green, blue] = pdfColor(st.color);
+    const dash = st.dash
+      ? `[${String(st.dash).split(/[\s,]+/).filter(Boolean).map((v) => (Number(v) * PDF_MM).toFixed(3)).join(" ")}] 0 d`
+      : "[] 0 d";
+    ops.push(`q ${red} ${green} ${blue} RG ${(st.width * PDF_MM).toFixed(3)} w ${dash} 1 J 1 j`);
+    ops.push(parts.join("\n") + "\nS Q");
+  }
+
+  const content = ops.join("\n");
+  const pageW = (W * PDF_MM).toFixed(3), pageH = (H * PDF_MM).toFixed(3);
+
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageW} ${pageH}] /Resources << >> /Contents 4 0 R >>`,
+    `<< /Length ${content.length} >>\nstream\n${content}\nendstream`,
+  ];
+
+  let pdf = "%PDF-1.4\n";
+  const offsets = [];
+  for (let i = 0; i < objects.length; i++) {
+    offsets.push(pdf.length);
+    pdf += `${i + 1} 0 obj\n${objects[i]}\nendobj\n`;
+  }
+  const xref = pdf.length;
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  for (const off of offsets) pdf += `${String(off).padStart(10, "0")} 00000 n \n`;
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return pdf;
+}
+
+function downloadPdf() {
+  if (!state.result) return;
+  const pdf = buildPdf(state.result, 10);
+  const blob = new Blob([pdf], { type: "application/pdf" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = (state.lastFileName || "paket.svg").replace(/\.svg$/, ".pdf");
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
+/* --------------------------------------------------- EPS
+   PostScript, страница по габариту чертежа в пунктах. CorelDRAW импортирует EPS нативно
+   и не пересчитывает единицы, поэтому миллиметры остаются миллиметрами. */
+const EPS_PT = 72 / 25.4;
+
+function buildEps(drawing, margin, title) {
+  const [x0, y0] = drawing.bbox;
+  const W = drawing.w + margin * 2;
+  const H = drawing.h + margin * 2;
+  const px = (p) => (p[0] - x0 + margin) * EPS_PT;
+  const py = (p) => (p[1] - y0 + margin) * EPS_PT;
+  const n = (v) => (Math.round(v * 1000) / 1000).toFixed(3);
+
+  const bbW = W * EPS_PT, bbH = H * EPS_PT;
+  const out = [
+    "%!PS-Adobe-3.0 EPSF-3.0",
+    `%%BoundingBox: 0 0 ${Math.ceil(bbW)} ${Math.ceil(bbH)}`,
+    `%%HiResBoundingBox: 0 0 ${n(bbW)} ${n(bbH)}`,
+    `%%Title: ${String(title || "raschet").replace(/[^\x20-\x7E]/g, "_")}`,
+    "%%Creator: raschet-upakovki",
+    "%%DocumentData: Clean7Bit",
+    "%%LanguageLevel: 2",
+    "%%Pages: 1",
+    "%%EndComments",
+    "%%BeginProlog",
+    "/m { moveto } bind def",
+    "/l { lineto } bind def",
+    "/c { curveto } bind def",
+    "%%EndProlog",
+    "%%Page: 1 1",
+  ];
+
+  const layers = ["perf", "perfo", "crease", "cut"];
+  for (const typ of layers) {
+    const st = drawing.style[typ];
+    if (!st) continue;
+    const cmds = [];
+    for (const sg of drawing.segments) {
+      if (sg.type !== typ) continue;
+      if (sg.kind === "line") {
+        const dx = Math.abs(sg.b[0] - sg.a[0]), dy = Math.abs(sg.b[1] - sg.a[1]);
+        if (dx < 1e-9 && dy < 1e-9) continue;
+        cmds.push(`${n(px(sg.a))} ${n(py(sg.a))} m ${n(px(sg.b))} ${n(py(sg.b))} l`);
+      } else {
+        const cx = px(sg.c), cy = py(sg.c), r = sg.r * EPS_PT;
+        const segs = sg.full
+          ? arcBeziers(cx, cy, r, 0, 360)
+          : arcBeziers(cx, cy, r, sg.start, sg.start + sg.span);
+        const one = segs.map((bz, i) => `${i === 0 ? `${n(bz.x0)} ${n(bz.y0)} m` : ""} `
+          + `${n(bz.c1[0])} ${n(bz.c1[1])} ${n(bz.c2[0])} ${n(bz.c2[1])} `
+          + `${n(bz.x1)} ${n(bz.y1)} c`).join(" ");
+        cmds.push(one);
+      }
+    }
+    if (!cmds.length) continue;
+    const [red, green, blue] = pdfColor(st.color);
+    const dash = st.dash
+      ? `[${String(st.dash).split(/[\s,]+/).filter(Boolean).map((v) => n(Number(v) * EPS_PT)).join(" ")}] 0 setdash`
+      : "[] 0 setdash";
+    out.push("gsave");
+    out.push(`${red} ${green} ${blue} setrgbcolor`);
+    out.push(`${n(st.width * EPS_PT)} setlinewidth`);
+    out.push(dash);
+    out.push("2 setlinecap");   // срез ровно по концу линии, без выступа
+    out.push("1 setlinejoin");
+    out.push("newpath");
+    out.push(cmds.join("\n"));
+    out.push("stroke");
+    out.push("grestore");
+  }
+
+  out.push("showpage");
+  out.push("%%EOF");
+  return out.join("\n") + "\n";
+}
+
+function downloadEps() {
+  if (!state.result) return;
+  const name = state.lastFileName || "paket.svg";
+  const eps = buildEps(state.result, 10, name.replace(/\.svg$/, ""));
+  const blob = new Blob([eps], { type: "application/postscript;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name.replace(/\.svg$/, ".eps");
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
 function download() {
   if (!state.lastSvg) return;
   const blob = new Blob([state.lastSvg], { type: "image/svg+xml;charset=utf-8" });
@@ -4757,6 +4967,8 @@ buildLhChips();
 syncTypeFields();
 
 $("dlSvg").addEventListener("click", download);
+$("dlPdf").addEventListener("click", downloadPdf);
+$("dlEps").addEventListener("click", downloadEps);
 $("dimToggle").addEventListener("click", () => {
   state.showDims = !state.showDims;
   if (state.result) renderPreview(state.result);
