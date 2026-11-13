@@ -501,7 +501,7 @@ input[type="number"]:disabled { background: var(--bg); color: var(--ink-3); }
       <div class="grid2">
         <div class="field">
           <label class="lbl" for="pB">Ширина <span class="unit">B, мм</span></label>
-          <input id="pB" type="number" inputmode="decimal" min="16" step="1" value="100">
+          <input id="pB" type="number" inputmode="decimal" min="15" step="1" value="100">
         </div>
         <div class="field">
           <label class="lbl" for="pE">Клапан крышки <span class="unit">E, мм</span></label>
@@ -3431,7 +3431,7 @@ const HANDLE_MODES = [
    Модель берётся из models.js, движок — из engine.js.
    ============================================================ */
 
-const BUILD = "v27 · 09112026";   // подставляется сборщиком
+const BUILD = "v28 · 09112026";   // подставляется сборщиком
 
 /* ---------- авторство ------------------------------------------------------
    Made by Yauheni Padloukin @evgenpdl & Claude Haiku 5.5
@@ -4786,7 +4786,7 @@ let autoTimer = null;
    нельзя было бы набрать «200»: первая цифра «2» уже меньше 16. */
 const LIMITS = {
   pA: 16,    // длина
-  pB: 16,    // ширина
+  pB: 15,    // ширина
   pH: 20,    // высота
   pD: 12,    // клапан склейки
   pE: 8,     // клапан крышки
